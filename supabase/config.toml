@@ -1,0 +1,38 @@
+project_id = "wordcards"
+
+[api]
+enabled = true
+port = 54321
+schemas = ["public"]
+extra_search_path = ["public", "extensions"]
+max_rows = 1000
+
+[db]
+port = 54322
+major_version = 17
+
+[auth]
+enabled = true
+site_url = "http://localhost:5173"
+additional_redirect_urls = ["http://localhost:5173"]
+jwt_expiry = 3600
+enable_signup = false        # 登録は signup 関数（招待コード付き）経由のみ
+enable_confirmations = false
+
+[auth.email]
+enable_signup = false
+double_confirm_changes = true
+enable_confirmations = false
+
+[storage]
+enabled = true
+file_size_limit = "10MiB"
+
+[functions.signup]
+verify_jwt = false
+
+[functions.shared-set]
+verify_jwt = false
+
+[functions.purge-trash]
+verify_jwt = false

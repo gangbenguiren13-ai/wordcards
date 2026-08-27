@@ -1,0 +1,70 @@
+@import "tailwindcss";
+
+/* ------------------------------------------------------------------
+   WordCards デザイントークン
+   方針: 明るく実直。過度なグラデーション・装飾を使わない。
+   タップ領域は最小 44px、生徒用の主要ボタンは 64px 以上。
+------------------------------------------------------------------- */
+@theme {
+  --color-ink:        #16202e;
+  --color-ink-soft:   #4a5768;
+  --color-line:       #d8dee7;
+  --color-surface:    #ffffff;
+  --color-canvas:     #f4f6f9;
+
+  --color-brand-50:   #eef4ff;
+  --color-brand-100:  #dbe6ff;
+  --color-brand-500:  #2563eb;
+  --color-brand-600:  #1d4ed8;
+  --color-brand-700:  #1e40af;
+
+  --color-ok-50:      #ecfdf5;
+  --color-ok-500:     #059669;
+  --color-ok-700:     #047857;
+
+  --color-warn-50:    #fffbeb;
+  --color-warn-500:   #d97706;
+  --color-warn-700:   #b45309;
+
+  --color-danger-50:  #fef2f2;
+  --color-danger-500: #dc2626;
+  --color-danger-700: #b91c1c;
+
+  --radius-card: 14px;
+  --spacing-tap: 44px;
+  --spacing-tap-lg: 64px;
+}
+
+@layer base {
+  html {
+    -webkit-text-size-adjust: 100%;
+    -webkit-tap-highlight-color: transparent;
+  }
+  body {
+    margin: 0;
+    background: var(--color-canvas);
+    color: var(--color-ink);
+    font-family: -apple-system, BlinkMacSystemFont, "Hiragino Sans",
+      "Noto Sans JP", "Yu Gothic", Meiryo, sans-serif;
+    /* iPad: ダブルタップ拡大を抑止しつつピンチは残す */
+    touch-action: manipulation;
+  }
+  /* フォーカスリングはキーボード操作時のみ */
+  :focus { outline: none; }
+  :focus-visible {
+    outline: 3px solid var(--color-brand-500);
+    outline-offset: 2px;
+  }
+  button { font: inherit; }
+}
+
+@layer utilities {
+  /* ゲーム画面など、文字選択させたくない領域に付ける */
+  .no-select {
+    user-select: none;
+    -webkit-user-select: none;
+  }
+  /* iPad の安全領域 */
+  .pt-safe { padding-top: env(safe-area-inset-top); }
+  .pb-safe { padding-bottom: env(safe-area-inset-bottom); }
+}

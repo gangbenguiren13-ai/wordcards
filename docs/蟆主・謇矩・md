@@ -1,0 +1,196 @@
+# WordCards 導入手順（はじめてのセットアップ）
+
+パソコンに開発用のソフトを入れる必要はありません。**すべてブラウザの操作だけ**で完了します。
+所要時間の目安は 40〜60分です。途中で分からなくなったら、その手順の番号をAIに伝えてください。
+
+用意するもの:
+
+- GitHub アカウント（すでにお持ちのもの）
+- メールアドレス（Supabase と Cloudflare の登録に使います）
+
+---
+
+## 手順の全体像
+
+| # | やること | 場所 |
+|---|---------|------|
+| 1 | コードを GitHub に置く | github.com |
+| 2 | Supabase でプロジェクトを作る | supabase.com |
+| 3 | データベースの設定を流し込む | Supabase の SQL Editor |
+| 4 | 鍵（キー）を控える | Supabase |
+| 5 | GitHub に鍵を登録する | github.com |
+| 6 | サーバー側の機能を配置する | github.com（自動） |
+| 7 | Cloudflare Pages で公開する | cloudflare.com |
+| 8 | 動作確認 | ブラウザ |
+
+---
+
+## 1. コードを GitHub に置く
+
+1. GitHub で新しいリポジトリを作ります（名前は `wordcards` など）。
+   - **Private（非公開）** を選んでください。
+2. 受け取った ZIP を展開し、**中身のファイル一式**をリポジトリにドラッグ＆ドロップでアップロードします。
+   - `wordcards` フォルダごとではなく、その中の `package.json` や `src` などが直下に来るようにしてください。
+3. コミット（Commit changes）を押します。
+
+---
+
+## 2. Supabase でプロジェクトを作る
+
+1. https://supabase.com を開き、**Start your project** から GitHub アカウントでサインアップします（無料）。
+2. **New project** を押し、次のように入力します。
+   - Name: `wordcards`
+   - Database Password: 自動生成されたものをコピーし、**手元に保存**してください（あとで使うことは基本ありませんが、紛失すると再発行が面倒です）。
+   - Region: **Northeast Asia (Tokyo)** を選びます。教材データが日本国内に保存されます。
+   - Plan: **Free**
+3. 「Setting up project...」の表示が消えるまで、2分ほど待ちます。
+
+---
+
+## 3. データベースの設定を流し込む
+
+1. Supabase の左メニューから **SQL Editor** を開きます。
+2. **New query** を押します。
+3. ZIP の中の `supabase/setup/all-in-one.sql` をテキストエディタ（メモ帳など）で開き、**全部**をコピーします。
+4. SQL Editor に貼り付けて、右下の **Run** を押します。
+5. 「Success. No rows returned」と出れば成功です。
+
+> エラーが出た場合は、そのメッセージをそのままAIに伝えてください。何度実行しても壊れないように書いてあるので、直してから再実行して大丈夫です。
+
+### 認証の設定
+
+1. 左メニュー **Authentication** > **Sign In / Providers**（表記は **Providers** の場合もあります）を開きます。
+2. **Email** が有効（Enabled）になっていることを確認します。
+3. **Confirm email** は **オフ** にします（校内で使うため、確認メールなしで登録できるようにします）。
+
+> 画面の名前は Supabase の更新で変わることがあります。見つからないときは、探している言葉（例:「Confirm email」）を
+> AIに伝えれば、その時点の場所を調べられます。
+
+---
+
+## 4. 鍵（キー）を控える
+
+左メニュー **Project Settings**（歯車）から、次の3つをメモ帳などに控えます。
+
+| 名前 | 場所 | 使いみち |
+|------|------|---------|
+| Project URL | Settings > **Data API** の `Project URL` | 手順5・7で使う |
+| anon public キー | Settings > **API Keys** の `anon` `public` | 手順7で使う |
+| Reference ID | Settings > **General** の `Reference ID` | 手順5で使う |
+
+さらに、**アクセストークン**を1つ作ります。
+
+1. 画面右上のアカウントアイコン > **Account Settings** > **Access Tokens** を開きます。
+2. **Generate new token** を押し、名前を `github-deploy` にして作成します。
+3. 表示されたトークンを**その場でコピー**します（あとから見返せません）。
+
+最後に、**招待コード**を自分で決めます。他の先生に伝える合言葉です。
+推測されにくい、20文字程度の文字列にしてください（例: `takano-eigo-2026-8f3a9c`）。
+
+---
+
+## 5. GitHub に鍵を登録する
+
+GitHub のリポジトリで **Settings** > **Secrets and variables** > **Actions** を開き、
+**New repository secret** から次の3つを登録します。
+
+| Name（名前） | Secret（値） |
+|-------------|-------------|
+| `SUPABASE_ACCESS_TOKEN` | 手順4で作ったアクセストークン |
+| `SUPABASE_PROJECT_REF` | 手順4の Reference ID |
+| `SUPABASE_URL` | 手順4の Project URL |
+
+---
+
+## 6. サーバー側の機能を配置する
+
+### 6-1. 招待コードなどを Supabase に登録する
+
+Supabase のダッシュボードで **Edge Functions** > **Secrets** を開きます。
+（メニューが見つからないときは、このURLを直接開いてください:
+`https://supabase.com/dashboard/project/_/functions/secrets` — ログイン中のプロジェクトが自動で選ばれます）
+
+次の2つを追加します。
+
+| Name | Value |
+|------|-------|
+| `INVITE_CODE` | 手順4で決めた招待コード |
+| `CRON_SECRET` | 適当な長いランダム文字列（ゴミ箱の自動整理に使います） |
+
+### 6-2. 関数を配置する
+
+1. GitHub のリポジトリで **Actions** タブを開きます。
+2. 左の一覧から **Deploy Supabase Functions** を選び、**Run workflow** を押します。
+3. 緑のチェックが付けば完了です（1〜2分）。
+
+> 赤い×になった場合は、その行をクリックしてエラーメッセージをAIに伝えてください。
+
+---
+
+## 7. Cloudflare Pages で公開する
+
+1. https://dash.cloudflare.com にサインアップします（無料）。
+2. **Workers & Pages** のページを開き、**Create application** > **Pages** > **Connect to Git** を選びます。
+   （ダッシュボードの改装で「Compute」の下にある場合もあります。「Pages」と「Connect to Git」という言葉を探してください）
+3. GitHub と連携し、`wordcards` リポジトリを選びます。
+4. ビルド設定を次のようにします。
+
+   | 項目 | 値 |
+   |------|-----|
+   | Framework preset | `Vite` |
+   | Build command | `npm run build` |
+   | Build output directory | `dist` |
+
+5. **Environment variables** に次の2つを追加します（Production・Preview の両方）。
+
+   | 名前 | 値 |
+   |------|-----|
+   | `VITE_SUPABASE_URL` | 手順4の Project URL |
+   | `VITE_SUPABASE_ANON_KEY` | 手順4の anon public キー |
+
+6. **Save and Deploy** を押します。数分でURL（`https://wordcards-xxx.pages.dev`）が発行されます。
+
+### 7-1. ログイン後の戻り先を登録する
+
+Supabase の **Authentication** > **URL Configuration** で、
+`Site URL` に手順7で発行されたURLを設定します。
+`Redirect URLs` にも同じURLと `https://（そのURL）/t/login` を追加してください。
+（パスワード再設定のメールから正しく戻ってくるために必要です）
+
+---
+
+## 8. 動作確認
+
+発行されたURLを開いて、次を順に確認します。
+
+- [ ] ログイン画面が表示される
+- [ ] 「新規登録」タブで、**招待コードを空欄**にすると登録できない
+- [ ] 正しい招待コードを入れると、アカウントが作れてログインできる
+- [ ] 「新しい教材セット」から教材セットを作れる
+- [ ] カードを追加し、写真を選ぶとサムネイルが出る
+- [ ] 大きい写真（スマホで撮った写真など）を入れても、数百KBまで縮んだと表示される
+- [ ] 横向きで撮った写真が、横倒しにならず正しい向きで表示される
+- [ ] 音声（mp3）をつけると、その場で再生できる
+- [ ] 教材セットを削除 → ゴミ箱タブ → 「もとに戻す」で戻る
+- [ ] ログアウトした状態でURLの末尾を `/t/home` にしても、ログイン画面に戻される
+
+ここまで動けば **P0・P1 は完了**です。
+
+---
+
+## 補足
+
+### 費用について
+
+このセットアップは全て無料枠で動きます。自動的に課金されることはありません。
+無料枠を超えそうになったら、Supabase のダッシュボードに警告が出ます（月1回の確認を `運用手順.md` におすすめしています）。
+
+### 独自ドメインについて
+
+`.pages.dev` のURLのままで問題なく使えます。
+学校のフィルタリングで `.pages.dev` が弾かれる場合のみ、独自ドメイン（年1,000円程度）を検討してください。
+
+### 更新のしかた
+
+コードを直したいときは、AIに修正してもらったファイルを GitHub に上げ直すだけです。
+Cloudflare Pages が自動で再ビルドし、数分で反映されます。
