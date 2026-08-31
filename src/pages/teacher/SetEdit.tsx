@@ -294,6 +294,16 @@ export function SetEditPage() {
           >
             カードを追加
           </Button>
+          {addCard.isError && (
+            <p className="rounded-xl border-2 border-danger-500 bg-danger-50 p-3 text-center text-sm font-bold text-danger-700">
+              ⚠ カードを追加できませんでした：{(addCard.error as Error)?.message ?? '通信を確認してください'}
+            </p>
+          )}
+          {(editCard.isError || reorder.isError) && (
+            <p className="rounded-xl border-2 border-danger-500 bg-danger-50 p-3 text-center text-sm font-bold text-danger-700">
+              ⚠ 保存できませんでした。通信を確認して、もう一度お試しください。
+            </p>
+          )}
           {cards.length >= CARDS_HARD_LIMIT && (
             <p className="text-center text-sm font-bold text-danger-700">
               ⚠ 1つの教材セットに入れられるのは{CARDS_HARD_LIMIT}枚までです。
