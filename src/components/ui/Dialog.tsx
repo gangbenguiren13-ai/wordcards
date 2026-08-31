@@ -27,15 +27,24 @@ export function Dialog({
 }: Props) {
   const ref = useRef<HTMLDivElement>(null)
 
+  // onCancel は呼び出し側で毎レンダー作り直されることがある。
+  // useEffect の依存に入れると、キー入力のたびに effect が再実行されて
+  // focus() が入力欄からフォーカスを奪ってしまう（1文字ごとに打てなくなるバグ）。
+  // ref に逃がして、effect は open の変化にだけ反応させる。
+  const onCancelRef = useRef(onCancel)
+  useEffect(() => {
+    onCancelRef.current = onCancel
+  })
+
   useEffect(() => {
     if (!open) return
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') onCancel()
+      if (e.key === 'Escape') onCancelRef.current()
     }
     document.addEventListener('keydown', onKey)
     ref.current?.focus()
     return () => document.removeEventListener('keydown', onKey)
-  }, [open, onCancel])
+  }, [open])
 
   if (!open) return null
 
