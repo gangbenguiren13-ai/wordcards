@@ -7,6 +7,7 @@
 - 教科書由来の画像を扱うため、**画像・音声は非公開ストレージ＋署名付きURL**で配信する
 
 **セットアップは [docs/導入手順.md](docs/導入手順.md) を読んでください。** ブラウザの操作だけで完了します。
+鍵の置き場所と権限の考え方は [docs/鍵とアクセス権.md](docs/鍵とアクセス権.md) にまとめてあります。
 
 ## 現在の実装状況
 
@@ -14,11 +15,13 @@
 |---------|------|------|
 | P0 | 環境構築・DBスキーマ・RLS・CI | ✅ 完了 |
 | P1 | 認証（招待コード）・教材管理・画像圧縮・音声登録・バリデーション | ✅ 完了 |
-| P2 | 一括登録（表形式・CSV・ファイル名自動マッチング）・JSON/ZIP入出力 | ⬜ 未着手 |
+| P2 | フラッシュカード＋ゲーム共通基盤（要復習・音声・トースト） | ✅ 完了 |
 | P3 | 共有URL・QR・生徒アクセス・プリロード | ⬜ 未着手 |
-| P4 | フラッシュカード（要復習・音声再生） | ⬜ 未着手 |
-| P5 | 神経衰弱・Slow Reveal | ⬜ 未着手 |
+| P4 | 神経衰弱・Slow Reveal | ⬜ 未着手 |
+| P5 | 一括登録（表形式・CSV・自動マッチング）・JSON/ZIP入出力 | ⬜ 未着手 |
 | P6 | プレビュー・エラー画面・QA | ⬜ 未着手 |
+
+フェーズの順序は開発計画書 v1.1 で「価値順」に変更した（先にゲームを作れば授業で使えるため）。
 
 第2段階（What's Missing / Hidden Card / ジェスチャー / 参加コード / 校内共有 / PWA）は
 [docs/開発計画書.md](docs/開発計画書.md) の §4 を参照。
@@ -29,7 +32,7 @@
 |----|------|
 | フロントエンド | React 19 + Vite 8 + TypeScript + Tailwind CSS v4 |
 | 状態管理 | TanStack Query（サーバー状態）/ Zustand（ゲーム状態・P4以降） |
-| ホスティング | Cloudflare Pages |
+| ホスティング | Cloudflare Workers（静的アセット配信・`wrangler.jsonc`） |
 | バックエンド | Supabase（Auth / Postgres + RLS / 非公開Storage / Edge Functions） |
 
 ### 計画書からの変更点
@@ -72,6 +75,13 @@ supabase/
 ├─ setup/        SQL Editor に貼るだけの all-in-one.sql
 └─ functions/    Edge Functions（signup / shared-set / purge-trash）
 ```
+
+## SPA ルーティングについて
+
+このアプリは React Router によるクライアントサイドルーティングを使う。
+`wrangler.jsonc` の `assets.not_found_handling: "single-page-application"` が、
+ファイルに一致しないリクエストへ `index.html` を返す役割を担っている。
+**この設定を消すと `/t/home` や `/p/:token` の直接アクセスが404になる。**
 
 ## 設計上の約束（実装時に崩さないこと）
 

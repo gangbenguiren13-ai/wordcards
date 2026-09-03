@@ -1,4 +1,11 @@
 {
+  // Cloudflare Workers に「静的アセット（ビルド済みのdist）」として配信させる設定。
+  //
+  // not_found_handling を single-page-application にしているのが要点。
+  // このアプリは URL を JavaScript 側で切り替える方式（React Router）なので、
+  // これが無いと /t/home や /p/xxxx を直接開いたときに 404 になる。
+  // この設定により、ファイルが見つからないリクエストには index.html を返し、
+  // アプリ側でルーティングできるようになる。
   "name": "wordcards",
   "compatibility_date": "2026-08-28",
   "assets": {

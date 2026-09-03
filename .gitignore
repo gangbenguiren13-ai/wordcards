@@ -4,5 +4,5 @@ dist
 .env.local
 *.local
 .DS_Store
-*.tsbuildinfo
 supabase/.temp
+*.tsbuildinfo

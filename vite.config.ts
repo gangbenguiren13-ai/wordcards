@@ -13,7 +13,9 @@ export default defineConfig({
   },
   build: { target: 'es2020', sourcemap: false },
   test: {
+    // 既定は node。画面のテストはファイル先頭の
+    // `// @vitest-environment jsdom` で個別に切り替える
     environment: 'node',
-    include: ['src/**/*.test.ts'],
+    include: ['src/**/*.test.ts', 'src/**/*.test.tsx'],
   },
 })
