@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react'
-import { Link, useParams } from 'react-router-dom'
+import { Link, useNavigate, useParams } from 'react-router-dom'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { getCards, getSet, updateSet } from '@/api/sets'
+import { getCards, getSet, softDeleteSet, updateSet } from '@/api/sets'
 import {
   attachAudio,
   attachImage,
@@ -20,11 +20,16 @@ import { validateSet, type Issue } from '@/lib/validation'
 import { DISPLAY_MODE_LABELS, type Card, type DisplayMode } from '@/types'
 import { CARDS_HARD_LIMIT } from '@/lib/constants'
 import { normalizeWord } from '@/lib/normalize'
+import { useToast } from '@/components/toast/useToast'
+import { TRASH_RETENTION_DAYS } from '@/lib/constants'
 
 export function SetEditPage() {
   const { id = '' } = useParams()
   const qc = useQueryClient()
+  const navigate = useNavigate()
+  const toast = useToast()
   const { user } = useAuth()
+  const [deleteSetOpen, setDeleteSetOpen] = useState(false)
   const [transientIssues, setTransientIssues] = useState<Issue[]>([])
   const [busyCardId, setBusyCardId] = useState<string | null>(null)
   const [deleteTarget, setDeleteTarget] = useState<Card | null>(null)
@@ -41,7 +46,18 @@ export function SetEditPage() {
 
   const patchSet = useMutation({
     mutationFn: (patch: Parameters<typeof updateSet>[1]) => updateSet(id, patch),
-    onSuccess: () => void refreshSet(),
+    onSuccess: () => {
+      void refreshSet()
+      toast.show('保存しました', 'success')
+    },
+  })
+
+  const removeSet = useMutation({
+    mutationFn: () => softDeleteSet(id),
+    onSuccess: () => {
+      toast.show('ゴミ箱に入れました', 'success')
+      navigate('/t/home')
+    },
   })
 
   const addCard = useMutation({
@@ -173,7 +189,14 @@ export function SetEditPage() {
             maxLength={60}
             onBlur={(e) => {
               const v = e.target.value.trim()
-              if (v && v !== set.title) patchSet.mutate({ title: v })
+              // 空のまま離れた場合、DB側は1文字以上を要求するので保存できない。
+              // 黙って無視すると「入力欄は空なのに保存済み」に見えてしまうので、
+              // 元の名前を書き戻して状態を一致させる
+              if (!v) {
+                e.target.value = set.title
+                return
+              }
+              if (v !== set.title) patchSet.mutate({ title: v })
             }}
           />
 
@@ -294,16 +317,6 @@ export function SetEditPage() {
           >
             カードを追加
           </Button>
-          {addCard.isError && (
-            <p className="rounded-xl border-2 border-danger-500 bg-danger-50 p-3 text-center text-sm font-bold text-danger-700">
-              ⚠ カードを追加できませんでした：{(addCard.error as Error)?.message ?? '通信を確認してください'}
-            </p>
-          )}
-          {(editCard.isError || reorder.isError) && (
-            <p className="rounded-xl border-2 border-danger-500 bg-danger-50 p-3 text-center text-sm font-bold text-danger-700">
-              ⚠ 保存できませんでした。通信を確認して、もう一度お試しください。
-            </p>
-          )}
           {cards.length >= CARDS_HARD_LIMIT && (
             <p className="text-center text-sm font-bold text-danger-700">
               ⚠ 1つの教材セットに入れられるのは{CARDS_HARD_LIMIT}枚までです。
@@ -314,7 +327,37 @@ export function SetEditPage() {
         {transientIssues.length > 0 && (
           <Button onClick={() => setTransientIssues([])}>メッセージを消す</Button>
         )}
+
+        <Link
+          to={`/t/sets/${id}/play`}
+          className="inline-flex min-h-16 items-center justify-center rounded-xl border-2 border-brand-600 bg-brand-600 px-6 text-lg font-bold text-white"
+        >
+          ▶ ゲームをはじめる
+        </Link>
+
+        {/* セット全体の削除は、カードの操作から離れた最下部に置く。
+            編集中に押してしまう事故を防ぐため、色も控えめにしておく */}
+        <section className="mt-6 border-t-2 border-line pt-4">
+          <Button variant="danger" onClick={() => setDeleteSetOpen(true)}>
+            この教材セットを削除
+          </Button>
+        </section>
       </main>
+
+      <Dialog
+        open={deleteSetOpen}
+        title="この教材セットをゴミ箱に入れますか？"
+        confirmLabel="ゴミ箱に入れる"
+        danger
+        busy={removeSet.isPending}
+        onCancel={() => setDeleteSetOpen(false)}
+        onConfirm={() => removeSet.mutate()}
+      >
+        <p>
+          「{set.title}」とカード{cards.length}枚をゴミ箱に入れます。
+          {TRASH_RETENTION_DAYS}日以内ならホーム画面のゴミ箱から元に戻せます。
+        </p>
+      </Dialog>
 
       <Dialog
         open={Boolean(deleteTarget)}
