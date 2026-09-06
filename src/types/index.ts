@@ -105,6 +105,8 @@ export interface Card {
   image_path: string | null
   pair_image_path: string | null
   audio_path: string | null
+  /** 'upload' = 先生が登録 / 'generated' = 自動生成（将来用） */
+  audio_source: 'upload' | 'generated' | null
   sort_order: number
   created_at: string
   updated_at: string
