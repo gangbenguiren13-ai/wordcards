@@ -15,7 +15,9 @@ export async function createCard(setId: string, word: string, sortOrder: number)
 
 export async function updateCard(
   id: string,
-  patch: Partial<Pick<Card, 'word' | 'image_path' | 'pair_image_path' | 'audio_path' | 'sort_order'>>,
+  patch: Partial<
+    Pick<Card, 'word' | 'image_path' | 'pair_image_path' | 'audio_path' | 'audio_source' | 'sort_order'>
+  >,
 ) {
   const { error } = await supabase.from('cards').update(patch).eq('id', id)
   if (error) throw error
@@ -66,7 +68,7 @@ export async function attachAudio(
   file: File,
 ): Promise<string> {
   const path = await media.uploadAudio(ownerId, card.set_id, card.id, file)
-  await updateCard(card.id, { audio_path: path })
+  await updateCard(card.id, { audio_path: path, audio_source: 'upload' })
   return path
 }
 
@@ -78,9 +80,12 @@ export async function detachMedia(
   const path =
     kind === 'image' ? card.image_path : kind === 'pair' ? card.pair_image_path : card.audio_path
   if (!path) return
-  await updateCard(card.id, {
-    [kind === 'image' ? 'image_path' : kind === 'pair' ? 'pair_image_path' : 'audio_path']: null,
-  })
+  await updateCard(
+    card.id,
+    kind === 'audio'
+      ? { audio_path: null, audio_source: null }
+      : { [kind === 'image' ? 'image_path' : 'pair_image_path']: null },
+  )
   try {
     await media.removeMedia([path])
   } catch (e) {
