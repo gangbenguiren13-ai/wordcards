@@ -20,6 +20,12 @@ const HomePage = lazy(() =>
 const SetEditPage = lazy(() =>
   import('@/pages/teacher/SetEdit').then((m) => ({ default: m.SetEditPage })),
 )
+const PlaySelectPage = lazy(() =>
+  import('@/pages/teacher/PlaySelect').then((m) => ({ default: m.PlaySelectPage })),
+)
+const GamePlayPage = lazy(() =>
+  import('@/pages/teacher/GamePlay').then((m) => ({ default: m.GamePlayPage })),
+)
 
 export function App() {
   return (
@@ -67,7 +73,15 @@ export function App() {
             path="/t/sets/:id/play"
             element={
               <RequireAuth>
-                <ComingSoon title="ゲーム選択" phase="P4" />
+                <PlaySelectPage />
+              </RequireAuth>
+            }
+          />
+          <Route
+            path="/t/sets/:id/play/:game"
+            element={
+              <RequireAuth>
+                <GamePlayPage />
               </RequireAuth>
             }
           />
