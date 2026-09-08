@@ -2,12 +2,20 @@
 // 共有トークンを検証し、セット・カードと署名付きURLを返す。
 // 一覧APIや部分一致検索は提供しない（列挙を防ぐため）。
 import { createClient } from 'jsr:@supabase/supabase-js@2'
-import { clientIp, corsHeaders, json } from '../_shared/cors.ts'
+import { clientIp, corsHeaders, json as baseJson } from '../_shared/cors.ts'
+
+function json(body: unknown, status = 200): Response {
+  const response = baseJson(body, status)
+  response.headers.set('Cache-Control', 'no-store')
+  return response
+}
 
 const SIGNED_URL_TTL_SEC = 60 * 60 * 24 * 7 // 7日
 
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: corsHeaders })
+
+  if (req.method !== 'GET') return json({ error: 'METHOD_NOT_ALLOWED' }, 405)
 
   const url = new URL(req.url)
   const token = url.searchParams.get('token') ?? ''
@@ -20,11 +28,12 @@ Deno.serve(async (req) => {
 
   // --- レート制限: IPごと 60回/分 -------------------------------------
   const ip = clientIp(req)
-  const { data: allowed } = await admin.rpc('bump_rate_limit', {
+  const { data: allowed, error: rateError } = await admin.rpc('bump_rate_limit', {
     p_bucket: `sharedset:${ip}`,
     p_limit: 60,
     p_window_seconds: 60,
   })
+  if (rateError) return json({ error: 'UNAVAILABLE' }, 503)
   if (allowed === false) {
     return json({ error: 'RATE_LIMIT' }, 429)
   }
@@ -45,13 +54,16 @@ Deno.serve(async (req) => {
     .is('deleted_at', null)
     .maybeSingle()
 
-  if (error || !set) return json({ error: 'NOT_FOUND' }, 404)
+  if (error) return json({ error: 'UNAVAILABLE' }, 503)
+  if (!set) return json({ error: 'NOT_FOUND' }, 404)
 
-  const { data: cards } = await admin
+  const { data: cards, error: cardsError } = await admin
     .from('cards')
     .select('id, word, image_path, pair_image_path, audio_path, sort_order')
     .eq('set_id', set.id)
     .order('sort_order', { ascending: true })
+
+  if (cardsError) return json({ error: 'UNAVAILABLE' }, 503)
 
   const paths = [
     ...new Set(
@@ -63,13 +75,16 @@ Deno.serve(async (req) => {
 
   const urlMap: Record<string, string> = {}
   if (paths.length > 0) {
-    const { data: signed } = await admin.storage
+    const { data: signed, error: signedError } = await admin.storage
       .from('media')
       .createSignedUrls(paths, SIGNED_URL_TTL_SEC)
+    if (signedError) return json({ error: 'UNAVAILABLE' }, 503)
     for (const item of signed ?? []) {
       if (item.path && item.signedUrl) urlMap[item.path] = item.signedUrl
     }
   }
+
+  if (paths.some(path => !urlMap[path])) return json({ error: 'UNAVAILABLE' }, 503)
 
   return json({
     set: {
