@@ -27,6 +27,9 @@ const GamePlayPage = lazy(() =>
   import('@/pages/teacher/GamePlay').then((m) => ({ default: m.GamePlayPage })),
 )
 
+const SharePage = lazy(() => import('@/pages/teacher/Share').then(m => ({ default: m.SharePage })))
+const SharedPage = lazy(() => import('@/pages/student/Shared').then(m => ({ default: m.SharedPage })))
+
 export function App() {
   return (
     <>
@@ -86,10 +89,12 @@ export function App() {
             }
           />
 
+          <Route path="/t/sets/:id/share" element={<RequireAuth><SharePage /></RequireAuth>} />
+
           {/* ---------- 生徒用（ログインなし・管理画面への導線を置かない） ---------- */}
           <Route
             path="/p/:token"
-            element={<ComingSoon title="生徒用の参加ページ" phase="P3" showTeacherLink={false} />}
+            element={<SharedPage />}
           />
 
           <Route path="*" element={<NotFound />} />

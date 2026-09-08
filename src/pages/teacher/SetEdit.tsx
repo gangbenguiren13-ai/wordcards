@@ -335,6 +335,8 @@ export function SetEditPage() {
           ▶ ゲームをはじめる
         </Link>
 
+        <Link to={`/t/sets/${id}/share`} className="inline-flex min-h-14 items-center justify-center rounded-xl border-2 border-brand-600 p-3 font-bold text-brand-700">生徒に共有（リンク・QRコード）</Link>
+
         {/* セット全体の削除は、カードの操作から離れた最下部に置く。
             編集中に押してしまう事故を防ぐため、色も控えめにしておく */}
         <section className="mt-6 border-t-2 border-line pt-4">
