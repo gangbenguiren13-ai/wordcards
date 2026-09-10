@@ -31,6 +31,9 @@ export function GameShell({
   // ゲームの途中で誤ってタブを閉じたりリロードしたりすると、
   // ★を付けた記録が消えてやり直しになる。念のため確認を挟む。
   useEffect(() => {
+    // 設定画面の下で開始しても、ゲームの見出しから表示する。
+    document.documentElement.scrollTop = 0
+    document.body.scrollTop = 0
     const onBeforeUnload = (e: BeforeUnloadEvent) => {
       e.preventDefault()
       e.returnValue = ''
