@@ -10,6 +10,7 @@ import type { Card } from '@/types'
 export interface PreloadedCard {
   card: Card
   imageUrl: string | null
+  pairImageUrl?: string | null
   audio: ArrayBuffer | null
 }
 
@@ -42,6 +43,7 @@ export async function preloadCards(
   cards: Card[],
   signedUrls: Record<string, string>,
   onProgress?: (p: PreloadProgress) => void,
+  includePairs = false,
 ): Promise<PreloadResult> {
   const total = cards.length
   let done = 0
@@ -50,6 +52,7 @@ export async function preloadCards(
   const items = await Promise.all(
     cards.map(async (card): Promise<PreloadedCard> => {
       let imageUrl: string | null = null
+      let pairImageUrl: string | null = null
       let audio: ArrayBuffer | null = null
 
       try {
@@ -64,6 +67,18 @@ export async function preloadCards(
         }
       } catch (e) {
         failures.push({ cardId: card.id, reason: `画像 ${(e as Error).name}` })
+      }
+
+      try {
+        const pairSrc = includePairs && card.pair_image_path ? signedUrls[card.pair_image_path] : null
+        if (includePairs && card.pair_image_path && !pairSrc) failures.push({ cardId: card.id, reason: '関連画像URLを取得できませんでした' })
+        if (pairSrc) {
+          const res = await fetchWithTimeout(pairSrc)
+          if (res.ok) pairImageUrl = URL.createObjectURL(await res.blob())
+          else failures.push({ cardId: card.id, reason: `関連画像 ${res.status}` })
+        }
+      } catch (e) {
+        failures.push({ cardId: card.id, reason: `関連画像 ${(e as Error).name}` })
       }
 
       try {
@@ -82,7 +97,7 @@ export async function preloadCards(
 
       done++
       onProgress?.({ done, total })
-      return { card, imageUrl, audio }
+      return { card, imageUrl, pairImageUrl, audio }
     }),
   )
 
@@ -93,5 +108,6 @@ export async function preloadCards(
 export function releasePreloaded(items: PreloadedCard[]): void {
   for (const item of items) {
     if (item.imageUrl?.startsWith('blob:')) URL.revokeObjectURL(item.imageUrl)
+    if (item.pairImageUrl?.startsWith('blob:')) URL.revokeObjectURL(item.pairImageUrl)
   }
 }
