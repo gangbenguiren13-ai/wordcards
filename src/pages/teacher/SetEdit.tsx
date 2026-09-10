@@ -39,7 +39,7 @@ export function SetEditPage() {
   const cardsQuery = useQuery({ queryKey: ['cards', id], queryFn: () => getCards(id) })
 
   const cards = useMemo(() => cardsQuery.data ?? [], [cardsQuery.data])
-  const urls = useSignedUrls(cards.flatMap((c) => [c.image_path, c.audio_path]))
+  const urls = useSignedUrls(cards.flatMap((c) => [c.image_path, c.audio_path, c.pair_image_path]))
 
   const refreshCards = () => qc.invalidateQueries({ queryKey: ['cards', id] })
   const refreshSet = () => qc.invalidateQueries({ queryKey: ['set', id] })
@@ -84,12 +84,12 @@ export function SetEditPage() {
     onSuccess: () => void refreshCards(),
   })
 
-  async function handleImage(card: Card, file: File) {
+  async function handleImage(card: Card, file: File, kind: 'image' | 'pair' = 'image') {
     if (!user) return
     setBusyCardId(card.id)
     setUploadNote(null)
     try {
-      const r = await attachImage(user.id, card, file)
+      const r = await attachImage(user.id, card, file, kind)
       setUploadNote(
         `「${file.name}」を取り込みました（${Math.round(r.originalBytes / 1024)}KB → ${Math.round(r.storedBytes / 1024)}KB）`,
       )
@@ -292,6 +292,9 @@ export function SetEditPage() {
                 total={cards.length}
                 imageUrl={card.image_path ? urls.data?.[card.image_path] : undefined}
                 audioUrl={card.audio_path ? urls.data?.[card.audio_path] : undefined}
+                pairImageUrl={card.pair_image_path ? urls.data?.[card.pair_image_path] : undefined}
+                onPickPair={(file) => void handleImage(card, file, 'pair')}
+                onRemovePair={() => void detachMedia(card, 'pair').then(refreshCards).catch(() => toast.show('関連画像を外せませんでした。通信を確認して、もう一度お試しください。'))}
                 busy={busyCardId === card.id}
                 onWordChange={(word) =>
                   editCard.mutate({ cardId: card.id, patch: { word } })

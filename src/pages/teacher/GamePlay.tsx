@@ -17,10 +17,17 @@ import { useToast } from '@/components/toast/useToast'
 import { toJapaneseError } from '@/lib/errorMessage'
 import { DISPLAY_MODE_LABELS, type DisplayMode } from '@/types'
 import { AUTO_SECONDS_MAX, AUTO_SECONDS_MIN } from '@/lib/constants'
+import { MiniPlayPage } from './MiniPlay'
 
 type Stage = 'settings' | 'loading' | 'playing'
 
 export function GamePlayPage() {
+  const { game } = useParams()
+  if (game === 'memory' || game === 'slowreveal') return <MiniPlayPage game={game} />
+  return <FlashcardsPlayPage />
+}
+
+function FlashcardsPlayPage() {
   const { id = '', game = 'flashcards' } = useParams()
   const navigate = useNavigate()
   const toast = useToast()

@@ -34,14 +34,14 @@ const GAMES: GameCard[] = [
     name: '神経衰弱',
     icon: '🔄',
     summary: '裏返したカードから同じ組を探す。ペアやチーム対抗にも使える。',
-    ready: false,
+    ready: true,
   },
   {
     id: 'slowreveal',
     name: 'Slow Reveal',
     icon: '🌅',
     summary: '画像を一方向からだんだん見せて、全部見える前に単語を当てる。',
-    ready: false,
+    ready: true,
   },
 ]
 

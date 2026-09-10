@@ -7,9 +7,7 @@ import { AppHeader } from '@/components/AppHeader'
 import { LoadError } from '@/components/LoadError'
 import { Button, Dialog, Spinner } from '@/components/ui'
 import { hasBlockingError, validateSet } from '@/lib/validation'
-import { selectUsableCards } from '@/lib/usableCards'
-import { effectiveDisplay } from '@/games/flashcards/settings'
-import { FLASHCARDS_DEFAULTS } from '@/lib/gameDefaults'
+import { canShareGame } from '@/games/shared/miniGames'
 import { toJapaneseError } from '@/lib/errorMessage'
 
 export function ShareQr({ url }: { url: string }) {
@@ -34,11 +32,9 @@ export function SharePage() {
       if (kind === 'stop') { await updateSet(id, { share_enabled: false }); return }
       // 保存中の編集や別タブの変更も含め、共有直前に最新データを検査する。
       const [latest, cards] = await Promise.all([getSet(id), getCards(id)])
-      const settings = { ...FLASHCARDS_DEFAULTS, ...latest.games_config.flashcards?.defaults }
       if (latest.deleted_at || hasBlockingError(validateSet({ title: latest.title, mode: latest.mode,
-        gamesConfig: latest.games_config, cards })) || !latest.games_config.flashcards?.enabledForStudents
-        || !selectUsableCards(cards, effectiveDisplay(latest, settings)).usable.length) {
-        throw new Error('共有できるフラッシュカードがありません。教材とゲーム設定を確認してください。')
+        gamesConfig: latest.games_config, cards })) || !canShareGame(latest, cards)) {
+        throw new Error('共有できるゲームがありません。教材とゲーム設定を確認してください。')
       }
       if (kind === 'rotate' || !latest.share_token) await issueShareToken(id)
       else await updateSet(id, { share_enabled: true })
@@ -56,10 +52,10 @@ export function SharePage() {
   if (!set || !cardsQuery.data) return <>{header}<Spinner /></>
   const url = set.share_token ? `${window.location.origin}/p/${set.share_token}` : ''
   const blocked = Boolean(set.deleted_at) || hasBlockingError(validateSet({ title: set.title, mode: set.mode,
-    gamesConfig: set.games_config, cards: cardsQuery.data })) || !set.games_config.flashcards?.enabledForStudents
+    gamesConfig: set.games_config, cards: cardsQuery.data })) || !canShareGame(set, cardsQuery.data)
   return <>{header}<main className="mx-auto flex max-w-xl flex-col gap-4 p-4 pb-12">
     <h1 className="text-xl font-bold">{set.title}</h1>
-    <p>生徒はログインせずに、QRコードかリンクからフラッシュカードを使えます。</p>
+    <p>生徒はログインせずに、QRコードかリンクから、先生が許可したゲームを使えます。</p>
     {notice && <p role="status" className="font-bold">{notice}</p>}
     {action.isError && <p role="alert" className="font-bold text-danger-700">{toJapaneseError(action.error)}</p>}
     {blocked && <p role="alert">共有前に、教材の未入力・ゲームの公開設定を確認してください。</p>}
