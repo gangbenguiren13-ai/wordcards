@@ -9,6 +9,9 @@ interface Props {
   total: number
   imageUrl?: string
   audioUrl?: string
+  pairImageUrl?: string
+  onPickPair?: (file: File) => void
+  onRemovePair?: () => void
   busy?: boolean
   onWordChange: (word: string) => void
   onPickImage: (file: File) => void
@@ -26,6 +29,9 @@ export function CardRow({
   total,
   imageUrl,
   audioUrl,
+  pairImageUrl,
+  onPickPair,
+  onRemovePair,
   busy,
   onWordChange,
   onPickImage,
@@ -38,6 +44,7 @@ export function CardRow({
 }: Props) {
   const imageInput = useRef<HTMLInputElement>(null)
   const audioInput = useRef<HTMLInputElement>(null)
+  const pairInput = useRef<HTMLInputElement>(null)
   const [word, setWord] = useState(card.word)
 
   function handleFile(file: File | undefined, kind: 'image' | 'audio') {
@@ -135,6 +142,18 @@ export function CardRow({
         {audioUrl && (
           <audio src={audioUrl} controls preload="none" className="mt-1 h-8 w-full max-w-56" />
         )}
+        {onPickPair && <details className="mt-2 text-sm"><summary className="min-h-11 cursor-pointer py-2 font-bold">神経衰弱用の関連画像</summary>
+          <p className="text-xs text-ink-soft">「関連画像どうし」のペアにする2枚目の画像です。</p>
+          {pairImageUrl && <img src={pairImageUrl} alt="関連画像" className="my-2 h-20 w-24 object-contain" />}
+          <div className="flex flex-wrap gap-2"><Button disabled={busy} onClick={() => pairInput.current?.click()}>{pairImageUrl ? '関連画像を変える' : '関連画像を選ぶ'}</Button>
+            {card.pair_image_path && <Button disabled={busy} onClick={onRemovePair}>関連画像を外す</Button>}</div>
+          <input ref={pairInput} type="file" accept="image/*" hidden onChange={e => {
+            const file = e.target.files?.[0]; e.target.value = ''
+            if (!file) return
+            const issue = checkUploadFile(file, 'image')
+            if (issue) onFileRejected(issue); else onPickPair(file)
+          }} />
+        </details>}
       </div>
       <input
         ref={audioInput}

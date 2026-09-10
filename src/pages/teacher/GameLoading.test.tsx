@@ -82,7 +82,7 @@ describe('教材読み込みの失敗と再試行', () => {
     expect(screen.queryByRole('button', { name: /はじめる/ })).toBeNull()
   })
   it('未実装ゲームのURLではフラッシュカードを開始しない', async () => {
-    openPage(false, 'memory')
+    openPage(false, 'whatsmissing')
     expect((await screen.findByRole('alert')).textContent).toContain('準備中')
     expect(screen.queryByRole('button', { name: /はじめる/ })).toBeNull()
   })

@@ -33,6 +33,18 @@ beforeEach(() => {
 afterEach(cleanup)
 
 describe('匿名の共有ページ', () => {
+  it('神経衰弱でも開始直前に最新の公開設定を確認する', async () => {
+    const p = payload()
+    p.cards = Array.from({ length: 6 }, (_, i) => ({ ...p.cards[0], id: String(i), word: `word${i}`, imageUrl: `https://example.invalid/${i}` }))
+    const stopped = structuredClone(p); stopped.set.gamesConfig.memory!.enabledForStudents = false
+    vi.mocked(fetchSharedSet).mockResolvedValueOnce(p).mockResolvedValueOnce(stopped)
+    mount(); fireEvent.click(await screen.findByRole('button', { name: '神経衰弱' }))
+    expect(screen.queryByText('ペアの種類')).toBeNull()
+    fireEvent.click(screen.getByRole('button', { name: '▶ はじめる' }))
+    expect((await screen.findByRole('alert')).textContent).toContain('おやすみちゅう')
+    expect(preloadCards).not.toHaveBeenCalled()
+    expect(screen.queryAllByRole('link')).toHaveLength(0)
+  })
   it('教師用リンクを出さず、開始時にも共有状態を確認する', async () => {
     localStorage.setItem('wordcards.flashcards.settings', JSON.stringify({ order: 'random' }))
     mount(); fireEvent.click(await screen.findByRole('button', { name: '▶ はじめる' }))

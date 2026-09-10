@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { preloadCards } from './preload'
+import { preloadCards, releasePreloaded } from './preload'
 import type { Card } from '@/types'
 
 const card: Card = {
@@ -9,6 +9,21 @@ const card: Card = {
 }
 afterEach(() => vi.unstubAllGlobals())
 describe('メディアの先読み', () => {
+  it('関連画像も先読みし、終了時に解放する', async () => {
+    const fetchMock = vi.fn().mockResolvedValue(new Response('image'))
+    const revoke = vi.fn()
+    vi.stubGlobal('fetch', fetchMock)
+    vi.stubGlobal('URL', { createObjectURL: () => 'blob:pair', revokeObjectURL: revoke })
+    const result = await preloadCards([{ ...card, image_path: null, audio_path: null, pair_image_path: 'pair.webp' }], { 'pair.webp': 'https://example.invalid/pair' }, undefined, true)
+    expect(result.failures).toHaveLength(0)
+    expect(result.items[0].pairImageUrl).toBe('blob:pair')
+    releasePreloaded(result.items); expect(revoke).toHaveBeenCalledWith('blob:pair')
+  })
+  it('関連画像を使うゲームでは署名欠落を拒否し、他ゲームでは要求しない', async () => {
+    const c = { ...card, image_path: null, audio_path: null, pair_image_path: 'pair.webp' }
+    expect((await preloadCards([c], {}, undefined, true)).failures).toHaveLength(1)
+    expect((await preloadCards([c], {})).failures).toHaveLength(0)
+  })
   it('登録済みメディアの署名URL欠落を失敗として返す', async () => {
     const fetchMock = vi.fn()
     vi.stubGlobal('fetch', fetchMock)
