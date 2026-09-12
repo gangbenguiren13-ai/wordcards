@@ -92,6 +92,8 @@ export function HomePage() {
           )}
         </div>
 
+        {tab === 'active' && <Link to="/t/import" className="mb-4 inline-flex min-h-11 items-center rounded-xl border-2 border-line bg-surface px-4 font-bold">教材ファイルを読み込む（JSON・ZIP）</Link>}
+
         {tab === 'trash' && (
           <p className="mb-4 rounded-xl border-2 border-line bg-surface p-3 text-sm text-ink-soft">
             ゴミ箱の教材は <strong>{TRASH_RETENTION_DAYS}日</strong> 保管され、そのあと自動で完全に削除されます。
@@ -157,6 +159,7 @@ export function HomePage() {
                   <Button variant="danger" onClick={() => setDeleteTarget(set)}>
                     削除
                   </Button>
+                  <Link to={`/t/sets/${set.id}/export`} className="inline-flex min-h-11 items-center rounded-xl border-2 border-line px-4 font-bold">書き出し</Link>
                 </div>
               ) : (
                 <div className="mt-3 flex gap-2">
