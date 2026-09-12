@@ -43,7 +43,7 @@ export function GameShell({
   }, [])
 
   return (
-    <div className="no-select flex min-h-dvh flex-col bg-canvas">
+    <div className="no-select flex h-dvh flex-col bg-canvas">
       <header className="flex shrink-0 items-center gap-2 border-b-2 border-line bg-surface p-2 pt-safe">
         <Button onClick={onExit} aria-label="ゲームをやめる">
           ← やめる
@@ -68,7 +68,7 @@ export function GameShell({
         </div>
       </header>
 
-      <main className="flex min-h-0 flex-1 flex-col p-3">{children}</main>
+      <main className="flex min-h-0 flex-1 flex-col overflow-y-auto p-3">{children}</main>
 
       {footer && (
         <footer className="shrink-0 border-t-2 border-line bg-surface p-3 pb-safe">{footer}</footer>
