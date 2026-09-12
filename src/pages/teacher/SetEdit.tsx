@@ -343,6 +343,7 @@ export function SetEditPage() {
         {/* セット全体の削除は、カードの操作から離れた最下部に置く。
             編集中に押してしまう事故を防ぐため、色も控えめにしておく */}
         <section className="mt-6 border-t-2 border-line pt-4">
+          <Link to={`/t/sets/${id}/export`} className="mb-4 flex min-h-11 items-center rounded-xl border-2 border-line bg-surface p-3 font-bold">教材を書き出す（JSON・ZIP）</Link>
           <Button variant="danger" onClick={() => setDeleteSetOpen(true)}>
             この教材セットを削除
           </Button>
