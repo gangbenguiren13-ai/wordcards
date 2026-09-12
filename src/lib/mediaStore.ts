@@ -15,7 +15,8 @@ export const MEDIA_BUCKET = 'media'
 /** Import operations use their own path so an interrupted replacement cannot corrupt the old file. */
 export async function uploadImportFile(ownerId: string, setId: string, cardId: string, kind: MediaKind, operationId: string, blob: Blob, ext: string): Promise<string> {
   const path = `${ownerId}/${setId}/${cardId}/${kind}-${operationId}.${ext}`
-  const { error } = await supabase.storage.from(MEDIA_BUCKET).upload(path, blob, { contentType: blob.type, upsert: true })
+  const contentType = blob.type || (kind === 'audio' ? ext === 'm4a' ? 'audio/mp4' : 'audio/mpeg' : 'image/webp')
+  const { error } = await supabase.storage.from(MEDIA_BUCKET).upload(path, blob, { contentType, upsert: true })
   if (error) throw error
   return path
 }

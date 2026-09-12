@@ -29,7 +29,7 @@ const enums: Record<string, readonly unknown[]> = {
   pairType: ['word_image', 'word_word', 'image_image', 'image_pairimage'], direction: ['top', 'bottom', 'left', 'right', 'center'],
   answerDisplay: ['image', 'image_word', 'image_word_audio'],
 }
-const ranges: Record<string, [number, number]> = { autoSeconds: [1, 10], teams: [1, 6], steps: [4, 12], timeLimitMinutes: [1, 10] }
+const ranges: Record<string, [number, number]> = { autoSeconds: [1, 10], teams: [1, 4], steps: [4, 12], timeLimitMinutes: [1, 10] }
 /** Only known game fields cross the transport boundary. Missing defaults support v1 examples. */
 export function portableGames(value: unknown, mode: SetMode): GamesConfig {
   const input = object(value ?? {})
