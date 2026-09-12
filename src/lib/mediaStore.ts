@@ -12,6 +12,41 @@ import { extOf } from './normalize'
 
 export const MEDIA_BUCKET = 'media'
 
+/** Import operations use their own path so an interrupted replacement cannot corrupt the old file. */
+export async function uploadImportFile(ownerId: string, setId: string, cardId: string, kind: MediaKind, operationId: string, blob: Blob, ext: string): Promise<string> {
+  const path = `${ownerId}/${setId}/${cardId}/${kind}-${operationId}.${ext}`
+  const { error } = await supabase.storage.from(MEDIA_BUCKET).upload(path, blob, { contentType: blob.type, upsert: true })
+  if (error) throw error
+  return path
+}
+
+/** Download through a signed URL with a timeout and a real byte limit. */
+export async function downloadMedia(path: string, maxBytes: number): Promise<Uint8Array<ArrayBuffer>> {
+  const url = await signedUrl(path)
+  const controller = new AbortController()
+  const timer = setTimeout(() => controller.abort(), 30000)
+  try {
+  const response = await fetch(url, { signal: controller.signal })
+  if (!response.ok || !response.body) throw new Error('画像・音声を取得できませんでした。通信を確認してください。')
+  const reader = response.body.getReader()
+  const chunks: Uint8Array[] = []
+  let total = 0
+  try {
+    while (true) {
+      const { done, value } = await reader.read()
+      if (done) break
+      total += value.length
+      if (total > maxBytes) throw new Error('書き出すファイルの容量が上限を超えています。教材を分けてください。')
+      chunks.push(value)
+    }
+  } catch (e) { await reader.cancel().catch(() => undefined); throw e }
+  const result = new Uint8Array(total)
+  let offset = 0
+  for (const chunk of chunks) { result.set(chunk, offset); offset += chunk.length }
+  return result
+  } finally { clearTimeout(timer) }
+}
+
 export type MediaKind = 'image' | 'pair' | 'audio'
 
 /** パス規約: {owner_id}/{set_id}/{card_id}/{kind}.{ext} */
