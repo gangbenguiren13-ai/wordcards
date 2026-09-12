@@ -29,6 +29,8 @@ const GamePlayPage = lazy(() =>
 
 const SharePage = lazy(() => import('@/pages/teacher/Share').then(m => ({ default: m.SharePage })))
 const SharedPage = lazy(() => import('@/pages/student/Shared').then(m => ({ default: m.SharedPage })))
+const BulkImportPage = lazy(() => import('@/pages/teacher/BulkImport').then(m => ({ default: m.BulkImportPage })))
+const SetTransferPage = lazy(() => import('@/pages/teacher/SetTransfer').then(m => ({ default: m.SetTransferPage })))
 
 export function App() {
   return (
@@ -60,7 +62,7 @@ export function App() {
             path="/t/sets/:id/import"
             element={
               <RequireAuth>
-                <ComingSoon title="一括登録" phase="P2" />
+                <BulkImportPage />
               </RequireAuth>
             }
           />
@@ -90,6 +92,8 @@ export function App() {
           />
 
           <Route path="/t/sets/:id/share" element={<RequireAuth><SharePage /></RequireAuth>} />
+          <Route path="/t/import" element={<RequireAuth><SetTransferPage /></RequireAuth>} />
+          <Route path="/t/sets/:id/export" element={<RequireAuth><SetTransferPage /></RequireAuth>} />
 
           {/* ---------- 生徒用（ログインなし・管理画面への導線を置かない） ---------- */}
           <Route
