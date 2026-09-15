@@ -78,11 +78,15 @@ export function isUnlocked(): boolean {
 
 const decoded = new Map<string, AudioBuffer>()
 let current: AudioBufferSourceNode | null = null
+let playbackVersion = 0
 
 export async function playBuffer(key: string, data: ArrayBuffer): Promise<void> {
+  stopPlayback()
+  const request = playbackVersion
   const c = audioContext()
-  if (!c) return
-  if (c.state === 'suspended') await c.resume().catch(() => {})
+  if (!c) throw new Error('Audio playback is unavailable')
+  if (c.state === 'suspended') await c.resume()
+  if (request !== playbackVersion) return
 
   let buf = decoded.get(key)
   if (!buf) {
@@ -90,7 +94,8 @@ export async function playBuffer(key: string, data: ArrayBuffer): Promise<void> 
     buf = await c.decodeAudioData(data.slice(0))
     decoded.set(key, buf)
   }
-  stopPlayback()
+  // 古いdecodeの完了で、後から押した音声や消音を上書きしない。
+  if (request !== playbackVersion) return
   const source = c.createBufferSource()
   source.buffer = buf
   source.connect(c.destination)
@@ -99,6 +104,7 @@ export async function playBuffer(key: string, data: ArrayBuffer): Promise<void> 
 }
 
 export function stopPlayback(): void {
+  playbackVersion++
   if (current) {
     try {
       current.stop()
@@ -187,17 +193,22 @@ export function pickVoice(voices: SpeechSynthesisVoice[]): SpeechSynthesisVoice 
 export interface SpeakOptions {
   rate?: number
   voice?: SpeechSynthesisVoice | null
+  onError?: () => void
 }
 
 /** 単語を読み上げる。連打しても積み上がらないよう、毎回cancelしてから話す */
-export function speak(text: string, { rate = 0.85, voice }: SpeakOptions = {}): void {
-  if (!speechAvailable() || !text.trim()) return
+export function speak(text: string, { rate = 0.85, voice, onError }: SpeakOptions = {}): void {
+  stopPlayback()
+  const request = playbackVersion
+  if (!speechAvailable() || !text.trim()) { onError?.(); return }
   const u = new SpeechSynthesisUtterance(text)
   u.lang = voice?.lang ?? 'en-US'
   u.rate = rate
   if (voice) u.voice = voice
-  window.speechSynthesis.cancel()
-  window.speechSynthesis.speak(u)
+  u.onerror = (event) => {
+    if (request === playbackVersion && event.error !== 'interrupted' && event.error !== 'canceled') onError?.()
+  }
+  try { window.speechSynthesis.speak(u) } catch { onError?.() }
 }
 
 /**
