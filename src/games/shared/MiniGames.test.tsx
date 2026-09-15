@@ -7,8 +7,9 @@ import { memoryCards, memorySettings, pickMemoryCards, revealSettings, canShareG
 import { memoryDefaults, slowRevealDefaults, defaultGamesConfig } from '@/lib/gameDefaults'
 import type { MaterialSet } from '@/types'
 import type { PreloadedCard } from '@/lib/preload'
+import { playBuffer, speak, speechAvailable } from '@/lib/audio'
 
-vi.mock('@/lib/audio', () => ({ playBuffer: vi.fn().mockResolvedValue(undefined), speak: vi.fn(), stopPlayback: vi.fn() }))
+vi.mock('@/lib/audio', () => ({ playBuffer: vi.fn().mockResolvedValue(undefined), speak: vi.fn(), speechAvailable: vi.fn(() => true), stopPlayback: vi.fn() }))
 const set: MaterialSet = { id: 's', owner_id: 'o', title: 'テスト', mode: 'junior', default_display: 'word_only', audio_enabled: false,
   show_word_on_answer: false, games_config: defaultGamesConfig('junior'), share_token: null, share_enabled: false, school_shared: false,
   created_at: '', updated_at: '', deleted_at: null }
@@ -16,7 +17,7 @@ const items: PreloadedCard[] = ['cat', 'dog', 'bird', 'fish', 'bear', 'lion'].ma
   card: { id: `${i}`, set_id: 's', word, image_path: `i${i}`, pair_image_path: `p${i}`, audio_path: null, audio_source: null, sort_order: i, created_at: '', updated_at: '' },
   imageUrl: `blob:i${i}`, pairImageUrl: `blob:p${i}`, audio: null,
 }))
-beforeEach(() => { vi.useFakeTimers(); vi.spyOn(Math, 'random').mockReturnValue(0.99999) })
+beforeEach(() => { vi.clearAllMocks(); vi.useFakeTimers(); vi.spyOn(Math, 'random').mockReturnValue(0.99999) })
 afterEach(() => { cleanup(); vi.useRealTimers(); vi.restoreAllMocks() })
 describe('神経衰弱', () => {
   const mount = () => render(<MemoryGame set={set} items={items.slice(0, 4)} settings={{ ...memoryDefaults('junior'), cardCount: 8, teams: 2 }} voice={null} onExit={vi.fn()} />)
@@ -36,6 +37,16 @@ describe('神経衰弱', () => {
     }
     expect(screen.getByText('ぜんぶ そろった！')).toBeDefined()
     expect(screen.getByText('チーム1：4')).toBeDefined()
+    expect(screen.getAllByRole('button', { pressed: true })).toHaveLength(8)
+    expect(screen.queryByText('ゲームえらびへ')).toBeNull()
+    const time = screen.getByText(/^\d+秒$/).textContent
+    act(() => vi.advanceTimersByTime(10000))
+    fireEvent.click(screen.getByText('結果を見る'))
+    expect(screen.getByText('ゲームえらびへ')).toBeDefined()
+    fireEvent.click(screen.getByText('カードに戻る'))
+    expect(screen.getAllByRole('button', { pressed: true })).toHaveLength(8)
+    expect(screen.getByText(/^\d+秒$/).textContent).toBe(time)
+    expect(screen.getByText('チーム1：4')).toBeDefined()
   })
   it('制限時間で終了する', () => {
     render(<MemoryGame set={set} items={items.slice(0, 4)} settings={{ ...memoryDefaults('junior'), timeLimitMinutes: 1 }} voice={null} onExit={vi.fn()} />)
@@ -46,6 +57,73 @@ describe('神経衰弱', () => {
     fireEvent.click(screen.getByLabelText('カード 2'))
     expect(screen.getByLabelText('カード 2 おもて').querySelector('img')?.getAttribute('src')).toBe('blob:p0')
     expect(screen.queryByText('cat')).toBeNull()
+  })
+  it('自動音声がオフでも一致した両側のカードを何度でも聞けて、得点・手番が変わらない', () => {
+    render(<MemoryGame set={{ ...set, audio_enabled: true }} items={items.slice(0, 4)} settings={{ ...memoryDefaults('junior'), audioOnMatch: false, teams: 2 }} voice={null} onExit={vi.fn()} />)
+    fireEvent.click(screen.getByLabelText('カード 1')); fireEvent.click(screen.getByLabelText('カード 2'))
+    expect(speak).not.toHaveBeenCalled()
+    for (const n of [1, 2, 1]) fireEvent.click(screen.getByLabelText(`カード ${n} そろった もう一度聞く`))
+    expect(speak).toHaveBeenCalledTimes(3)
+    expect(speak).toHaveBeenLastCalledWith('cat', expect.objectContaining({ voice: null }))
+    expect(screen.getByText('チーム1 のばん：1')).toBeDefined()
+    expect(screen.getAllByRole('button', { pressed: true }).filter(b => b.getAttribute('aria-label')?.startsWith('カード'))).toHaveLength(2)
+  })
+  it('最後の一致後も登録音声を聞ける。消音中と教材音声オフでは鳴らさない', () => {
+    const recorded = [{ ...items[0], audio: new ArrayBuffer(2) }]
+    render(<MemoryGame set={{ ...set, audio_enabled: true }} items={recorded} settings={memoryDefaults('junior')} voice={null} onExit={vi.fn()} />)
+    fireEvent.click(screen.getByLabelText('カード 1')); fireEvent.click(screen.getByLabelText('カード 2'))
+    expect(playBuffer).toHaveBeenCalledTimes(1)
+    fireEvent.click(screen.getByLabelText('カード 2 そろった もう一度聞く'))
+    expect(playBuffer).toHaveBeenCalledTimes(2)
+    expect(speak).not.toHaveBeenCalled()
+    fireEvent.click(screen.getByLabelText('音を消す'))
+    fireEvent.click(screen.getByLabelText('カード 1 そろった'))
+    expect(playBuffer).toHaveBeenCalledTimes(2)
+    fireEvent.click(screen.getByLabelText('音を出す'))
+    fireEvent.click(screen.getByLabelText('カード 1 そろった もう一度聞く'))
+    expect(playBuffer).toHaveBeenCalledTimes(3)
+    cleanup()
+    render(<MemoryGame set={set} items={recorded} settings={memoryDefaults('junior')} voice={null} onExit={vi.fn()} />)
+    fireEvent.click(screen.getByLabelText('カード 1')); fireEvent.click(screen.getByLabelText('カード 2'))
+    fireEvent.click(screen.getByLabelText('カード 1 そろった'))
+    expect(playBuffer).toHaveBeenCalledTimes(3)
+  })
+  it('時間切れでは未成立の表カードを伏せ、成立済みだけ聞けて手番も確定する', () => {
+    render(<MemoryGame set={{ ...set, audio_enabled: true }} items={items.slice(0, 4)} settings={{ ...memoryDefaults('junior'), audioOnMatch: false, timeLimitMinutes: 1, teams: 2 }} voice={null} onExit={vi.fn()} />)
+    fireEvent.click(screen.getByLabelText('カード 1')); fireEvent.click(screen.getByLabelText('カード 2'))
+    act(() => vi.advanceTimersByTime(59900))
+    fireEvent.click(screen.getByLabelText('カード 3')); fireEvent.click(screen.getByLabelText('カード 5'))
+    act(() => vi.advanceTimersByTime(1000))
+    expect(screen.getByText('じかんです！')).toBeDefined()
+    expect(screen.getByText('チーム1：1')).toBeDefined()
+    expect(screen.getByLabelText('カード 3').getAttribute('aria-pressed')).toBe('false')
+    fireEvent.click(screen.getByLabelText('カード 3'))
+    expect(speak).not.toHaveBeenCalled()
+    fireEvent.click(screen.getByLabelText('カード 1 そろった もう一度聞く'))
+    expect(speak).toHaveBeenCalledTimes(1)
+  })
+  it('小学校の再生ボタンと終了後の盤面に英単語を出さない', () => {
+    render(<MemoryGame set={{ ...set, mode: 'elementary', audio_enabled: true }} items={items.slice(0, 1)} settings={memoryDefaults('elementary')} voice={null} onExit={vi.fn()} />)
+    fireEvent.click(screen.getByLabelText('カード 1')); fireEvent.click(screen.getByLabelText('カード 2'))
+    fireEvent.click(screen.getByLabelText('カード 1 そろった もう一度聞く'))
+    expect(screen.queryByText('cat')).toBeNull()
+    expect(screen.queryByLabelText(/cat/)).toBeNull()
+    expect(document.querySelectorAll('a')).toHaveLength(0)
+  })
+  it('再生できなければ案内を出し、次のタップで再試行できる', async () => {
+    vi.mocked(playBuffer).mockRejectedValueOnce(new Error('decode failed'))
+    render(<MemoryGame set={{ ...set, audio_enabled: true }} items={[{ ...items[0], audio: new ArrayBuffer(2) }]} settings={{ ...memoryDefaults('junior'), audioOnMatch: false }} voice={null} onExit={vi.fn()} />)
+    fireEvent.click(screen.getByLabelText('カード 1')); fireEvent.click(screen.getByLabelText('カード 2'))
+    await act(async () => fireEvent.click(screen.getByLabelText('カード 1 そろった もう一度聞く')))
+    expect(screen.getByRole('alert').textContent).toContain('音声を再生できませんでした')
+    fireEvent.click(screen.getByLabelText('カード 1 そろった もう一度聞く'))
+    expect(screen.queryByRole('alert')).toBeNull()
+  })
+  it('端末に読み上げ機能がない場合も案内する', () => {
+    vi.mocked(speechAvailable).mockReturnValueOnce(false)
+    render(<MemoryGame set={{ ...set, audio_enabled: true }} items={items.slice(0, 1)} settings={memoryDefaults('junior')} voice={null} onExit={vi.fn()} />)
+    fireEvent.click(screen.getByLabelText('カード 1')); fireEvent.click(screen.getByLabelText('カード 2'))
+    expect(screen.getByRole('alert')).toBeDefined()
   })
 })
 describe('Slow Reveal', () => {
