@@ -19,10 +19,12 @@ export interface SharedPayload {
 }
 
 export class SharedError extends Error {
+  readonly code: 'NOT_FOUND' | 'NETWORK' | 'BUSY'
   constructor(public status: number) {
-    super(status === 404 ? 'このページは つかえません。先生に かくにんしてね。'
+    super(status === 404 ? 'このQRコードは つかえません。先生に みせてください。'
       : status === 429 ? 'アクセスが こんでいます。少しまってから もういちど。'
         : 'よみこめませんでした。通信を たしかめて、もういちど。')
+    this.code = status === 404 ? 'NOT_FOUND' : status === 429 ? 'BUSY' : 'NETWORK'
   }
 }
 
