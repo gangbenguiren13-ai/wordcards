@@ -1,4 +1,5 @@
-import { useEffect, useMemo, useState } from 'react'
+import { QuickStart, rememberStarted } from '@/games/shared/QuickStart'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
 import { getCards, getSet } from '@/api/sets'
@@ -31,6 +32,7 @@ function FlashcardsPlayPage() {
   const { id = '', game = 'flashcards' } = useParams()
   const navigate = useNavigate()
   const toast = useToast()
+  const startLock = useRef(false)
 
   const setQuery = useQuery({ queryKey: ['set', id], queryFn: () => getSet(id) })
   const cardsQuery = useQuery({ queryKey: ['cards', id], queryFn: () => getCards(id) })
@@ -112,7 +114,8 @@ function FlashcardsPlayPage() {
   }
 
   async function start() {
-    if (!set) return
+    if (!set || !settings || startLock.current) return
+    startLock.current = true
     // 音を出す権利はユーザー操作の中でしか得られない。開始ボタンがその機会になる
     setStage('loading')
     try {
@@ -127,11 +130,13 @@ function FlashcardsPlayPage() {
         return
       }
       setItems(result.items)
+      rememberSettings(settings)
+      rememberStarted('flashcards')
       setStage('playing')
     } catch (e) {
       toast.show(toJapaneseError(e))
       setStage('settings')
-    }
+    } finally { startLock.current = false }
   }
 
   if (stage === 'playing') {
@@ -169,13 +174,20 @@ function FlashcardsPlayPage() {
   return (
     <>
       <AppHeader title={`${gameName}のせってい`} back={`/t/sets/${id}/play`} />
-      <main className="mx-auto flex max-w-2xl flex-col gap-2 p-4 pb-28">
+      <main className="mx-auto flex max-w-2xl flex-col gap-3 p-4 pb-12">
         {usable.reason && (
           <p className="rounded-xl border-2 border-warn-500 bg-warn-50 p-3 text-sm font-bold text-warn-700">
             ！ {usable.reason}
           </p>
         )}
 
+        <QuickStart game="flashcards" count={usable.usable.length} disabled={!usable.usable.length}
+          onStart={() => void start()} summary={[
+            settings.order === 'random' ? 'ランダム' : '順番どおり',
+            settings.advance === 'auto' ? `自動 ${settings.autoSeconds}秒` : '手で送る',
+            settings.reviewMode === 'mixed' ? '復習を混ぜる' : '最後に復習',
+            set.audio_enabled ? (settings.audioAutoplay ? '音声は自動' : '音声はボタンで') : '音なし',
+          ].join('・')}>
         <div className="rounded-2xl border-2 border-line bg-surface px-4">
           {set.mode === 'junior' && (
             <SettingRow label="カードの見せ方">
@@ -235,8 +247,8 @@ function FlashcardsPlayPage() {
               value={settings.reviewMode}
               onChange={(v) => patch({ reviewMode: v })}
               options={[
-                { value: 'mixed' as const, label: 'ふくしゅうを混ぜる', sub: '同じ周の中でもう一度出る' },
-                { value: 'rounds' as const, label: 'さいごにふくしゅう', sub: '1周してから★だけ' },
+                { value: 'mixed' as const, label: '復習を混ぜる', sub: '同じ周の中でもう一度出る' },
+                { value: 'rounds' as const, label: '最後に復習', sub: '1周してから★だけ' },
               ]}
             />
           </SettingRow>
@@ -258,6 +270,7 @@ function FlashcardsPlayPage() {
                   checked={settings.audioAutoplay}
                   onChange={(v) => patch({ audioAutoplay: v })}
                 />
+                <details><summary className="min-h-11 cursor-pointer py-3 font-bold">読み上げの声を変える</summary>
                 {voices.length > 0 ? (
                   <label className="flex flex-col gap-1 pt-1">
                     <span className="text-sm font-bold text-ink-soft">読み上げの声（この端末だけの設定）</span>
@@ -292,25 +305,14 @@ function FlashcardsPlayPage() {
                     この端末には英語の読み上げ音声が入っていません。音声ファイルを登録したカードだけ鳴ります。
                   </p>
                 )}
+                </details>
               </div>
             </SettingRow>
           )}
         </div>
+        </QuickStart>
       </main>
 
-      <div className="fixed inset-x-0 bottom-0 border-t-2 border-line bg-surface p-3 pb-safe">
-        <div className="mx-auto max-w-2xl">
-          <Button
-            variant="primary"
-            size="xl"
-            block
-            disabled={usable.usable.length === 0}
-            onClick={() => void start()}
-          >
-            はじめる（{usable.usable.length}枚）
-          </Button>
-        </div>
-      </div>
     </>
   )
 }

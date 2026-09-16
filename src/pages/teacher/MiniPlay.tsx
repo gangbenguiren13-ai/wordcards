@@ -1,3 +1,5 @@
+import { lastMemorySettings, lastRevealSettings, rememberMiniSettings } from '@/games/shared/lastMiniSettings'
+import { QuickStart, rememberStarted } from '@/games/shared/QuickStart'
 import { useEffect, useRef, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
@@ -11,7 +13,7 @@ import { AppHeader } from '@/components/AppHeader'
 import { LoadError } from '@/components/LoadError'
 import { Button, Spinner, Toggle } from '@/components/ui'
 import { MemorySettingsPanel, RevealSettingsPanel } from '@/games/shared/MiniSettings'
-import { memoryCards, memorySettings, revealSettings, pickMemoryCards, GAME_NAMES, type MiniGame } from '@/games/shared/miniGames'
+import { memoryCards, pickMemoryCards, GAME_NAMES, type MiniGame } from '@/games/shared/miniGames'
 import { MemoryGame } from '@/games/shared/MemoryGame'
 import { SlowRevealGame } from '@/games/shared/SlowRevealGame'
 import type { MaterialSet, Card, MemoryDefaults, SlowRevealDefaults } from '@/types'
@@ -28,8 +30,8 @@ export function MiniPlayPage({ game }: { game: MiniGame }) {
 function MiniSetup({ set, cards, game }: { set: MaterialSet; cards: Card[]; game: MiniGame }) {
   const navigate = useNavigate()
   const qc = useQueryClient()
-  const [memory, setMemory] = useState(() => memorySettings(set))
-  const [reveal, setReveal] = useState(() => revealSettings(set))
+  const [memory, setMemory] = useState(() => lastMemorySettings(set))
+  const [reveal, setReveal] = useState(() => lastRevealSettings(set))
   const [enabled, setEnabled] = useState(set.games_config[game]?.enabledForStudents ?? false)
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
@@ -54,6 +56,8 @@ function MiniSetup({ set, cards, game }: { set: MaterialSet; cards: Card[]; game
       const result = await preloadCards(selected, urls, p => { if (alive.current) setProgress(p) }, game === 'memory' && memory.pairType === 'image_pairimage')
       if (!alive.current) { releasePreloaded(result.items); return }
       if (result.failures.length) { releasePreloaded(result.items); throw new Error('画像や音声を読み込めませんでした。通信を確認して、もう一度お試しください。') }
+      rememberMiniSettings(set, game, game === 'memory' ? memory : reveal)
+      rememberStarted(`${game}:${set.id}`)
       setPlaying({ items: result.items, memory, reveal })
     } catch (e) { if (alive.current) setError(toJapaneseError(e)) }
     finally { lock.current = false; if (alive.current) setBusy(false) }
@@ -77,15 +81,20 @@ function MiniSetup({ set, cards, game }: { set: MaterialSet; cards: Card[]; game
     : <SlowRevealGame set={set} items={playing.items} settings={playing.reveal} voice={voice} teacher onExit={() => navigate(`/t/sets/${set.id}/play`)} />
   return <><AppHeader title={`${GAME_NAMES[game]}のせってい`} back={`/t/sets/${set.id}/play`} />
     <main className="mx-auto flex max-w-2xl flex-col gap-4 p-4 pb-12">
-      <p>{game === 'memory' ? '2枚ずつめくってペアを探します。そろうと同じチームが続けられます。' : '画像が少しずつ開きます。答えを予想してから「せいかい を みる」を押します。'}</p>
-      {error && <p role="alert" className="font-bold text-danger-700">{error}</p>}{notice && <p role="status">{notice}</p>}
+      <QuickStart game={`${game}:${set.id}`} count={game === 'memory' ? memory.cardCount : usable.length}
+        busy={busy} disabled={blocked || insufficient} onStart={() => void start()}
+        summary={game === 'memory' ? `${memory.pick === 'random' ? 'ランダム' : '先頭から'}・${memory.teams === 1 ? '協力' : `${memory.teams}チーム対抗`}・${memory.timeLimitMinutes ? `${memory.timeLimitMinutes}分` : '時間制限なし'}・${set.audio_enabled && memory.audioOnMatch ? 'そろったら音声' : '自動音声なし'}`
+          : `${reveal.order === 'random' ? 'ランダム' : '順番どおり'}・${reveal.advance === 'manual' ? '手で開く' : `自動 ${reveal.autoSeconds}秒`}・${reveal.steps}段階`}>
       <fieldset disabled={busy} className="rounded-xl border-2 border-line bg-surface px-4">
         {game === 'memory' ? <MemorySettingsPanel value={memory} onChange={setMemory} mode={set.mode} /> : <RevealSettingsPanel value={reveal} onChange={setReveal} mode={set.mode} />}
       </fieldset>
+      </QuickStart>
+      <p>{game === 'memory' ? '2枚ずつめくってペアを探します。そろうと同じチームが続けられます。' : '画像が少しずつ開きます。答えを予想してから「せいかい を みる」を押します。'}</p>
+      {error && <p role="alert" className="font-bold text-danger-700">{error}</p>}{notice && <p role="status">{notice}</p>}
       <p>使えるカード：{usable.length}件{cards.length > usable.length ? `（画像などが足りない${cards.length - usable.length}件は除外）` : ''}</p>
       {insufficient && <p role="alert">{game === 'memory' ? `${memory.cardCount}枚で遊ぶには${memory.cardCount / 2}件の教材カードが必要です。枚数を減らすか、カードを追加してください。` : '画像のあるカードを追加してください。'}</p>}
       {blocked && <p role="alert">教材の未入力・エラーを直してから始めてください。</p>}
-      <Button variant="primary" size="xl" block disabled={busy || blocked || insufficient} onClick={() => void start()}>{busy ? '処理中…' : '▶ はじめる'}</Button>
+
       {busy && <progress aria-label="読み込み" value={progress.done} max={progress.total || 1} />}
       <fieldset disabled={busy} className="flex flex-col gap-3 rounded-xl border-2 border-line p-4"><Toggle label="生徒の共有画面でこのゲームを使えるようにする" checked={enabled} onChange={setEnabled} />
         <Button onClick={() => void save()}>この設定を教材に保存</Button><p className="text-sm text-ink-soft">保存すると、次に開くときと生徒用リンクに反映されます。</p></fieldset>
