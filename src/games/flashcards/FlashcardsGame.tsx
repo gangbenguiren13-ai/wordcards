@@ -1,9 +1,10 @@
+import { GameWord } from '@/games/shared/GameWord'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import type { MaterialSet } from '@/types'
 import type { PreloadedCard } from '@/lib/preload'
 import { GameShell } from '@/games/shared/GameShell'
 import { EndScreen } from '@/games/shared/EndScreen'
-import { Button } from '@/components/ui'
+import { Button, Dialog } from '@/components/ui'
 import {
   buildLap,
   createStates,
@@ -45,6 +46,9 @@ export function FlashcardsGame({ set, items, settings, voice, onExit, teacher = 
   const [revealed, setRevealed] = useState(false)
   const [audioOn, setAudioOn] = useState(true)
   const [finished, setFinished] = useState(false)
+  const [exitOpen, setExitOpen] = useState(false)
+  function requestExit() { stopPlayback(); setExitOpen(true) }
+  const exitDialog = <Dialog open={exitOpen} title="ゲームを やめますか？" confirmLabel="ゲームをやめる" cancelLabel="ゲームをつづける" onConfirm={onExit} onCancel={() => setExitOpen(false)}>★のきろくは きえます。</Dialog>
 
   const lastAdvance = useRef(0)
   const currentId = queue[position]
@@ -134,15 +138,16 @@ export function FlashcardsGame({ set, items, settings, voice, onExit, teacher = 
 
   // 自動送り
   useEffect(() => {
-    if (finished || settings.advance !== 'auto') return
+    if (finished || exitOpen || settings.advance !== 'auto') return
     const timer = setTimeout(goNext, settings.autoSeconds * 1000)
     return () => clearTimeout(timer)
-  }, [finished, position, lapIndex, settings.advance, settings.autoSeconds, goNext])
+  }, [finished, exitOpen, position, lapIndex, settings.advance, settings.autoSeconds, goNext])
 
   // キーボード操作（大型画面に映して教卓のPCから操作する場面のため）
   useEffect(() => {
-    if (finished) return
+    if (finished || exitOpen) return
     const onKey = (e: KeyboardEvent) => {
+      if (e.target instanceof HTMLElement && e.target.closest('button, input, select, textarea, [role="dialog"]')) return
       switch (e.key) {
         case 'ArrowRight': case ' ': case 'Enter':
           e.preventDefault(); goNext(); break
@@ -158,7 +163,7 @@ export function FlashcardsGame({ set, items, settings, voice, onExit, teacher = 
     }
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
-  }, [finished, goNext, goPrev, flip, toggleMark, playCurrent])
+  }, [finished, exitOpen, goNext, goPrev, flip, toggleMark, playCurrent])
 
   /* ---------------- 周回の切り替え ---------------- */
 
@@ -196,7 +201,7 @@ export function FlashcardsGame({ set, items, settings, voice, onExit, teacher = 
   function onPointerUp(e: React.PointerEvent) {
     const start = touchStart.current
     touchStart.current = null
-    if (!start) return
+    if (!start || exitOpen) return
     const dx = e.clientX - start.x
     const dy = e.clientY - start.y
     if (Math.abs(dx) > SWIPE_THRESHOLD_PX && Math.abs(dx) > Math.abs(dy)) {
@@ -206,9 +211,8 @@ export function FlashcardsGame({ set, items, settings, voice, onExit, teacher = 
     }
     // スワイプでなければ、押した位置で判断する
     const rect = (e.currentTarget as HTMLElement).getBoundingClientRect()
-    const ratio = (e.clientX - rect.left) / rect.width
-    if (twoSided && ratio > 0.3 && ratio < 0.7) flip()
-    else if (ratio < 0.3) goPrev()
+    const edge = Math.min(96, Math.max(64, rect.width * 0.12))
+    if (e.clientX - rect.left < edge) goPrev()
     else goNext()
   }
 
@@ -220,28 +224,32 @@ export function FlashcardsGame({ set, items, settings, voice, onExit, teacher = 
       .filter((c): c is NonNullable<typeof c> => Boolean(c))
     const stillHas = hasRemainingReview(states)
     return (
-      <GameShell teacher={teacher} title={set.title} onExit={onExit}>
+      <GameShell teacher={teacher} screenMode={settings.screenMode} title={set.title} onExit={requestExit}>
         <EndScreen
           title={stillHas ? 'おつかれさま！' : 'ぜんぶ できました！'}
           message={stillHas ? undefined : '★のカードはもうありません。'}
           reviewCards={marked}
-          showWords={set.mode !== 'elementary' || set.show_word_on_answer}
+          showWords={set.mode !== 'elementary'}
           imageUrlOf={(c) => byId.get(c.id)?.imageUrl ?? null}
           onReviewAgain={stillHas ? reviewAgain : undefined}
           onRestart={restartFromStart}
-          onFinish={onExit}
+          onFinish={requestExit}
         />
-      </GameShell>
+        {exitDialog}
+    </GameShell>
     )
   }
 
   if (!current) {
     return (
-      <GameShell teacher={teacher} title={set.title} onExit={onExit}>
-        <p className="m-auto text-center font-bold text-ink-soft">
-          このセットには表示できるカードがありません。
-        </p>
-      </GameShell>
+      <GameShell teacher={teacher} screenMode={settings.screenMode} title={set.title} onExit={requestExit}>
+        <section className="m-auto flex flex-col items-center gap-4 text-center">
+          <span aria-hidden="true" className="text-5xl">🃏</span>
+          <p className="font-bold">このセットには表示できるカードがありません。</p>
+          <Button size="xl" onClick={requestExit}>ゲームえらびに もどる</Button>
+        </section>
+        {exitDialog}
+    </GameShell>
     )
   }
 
@@ -253,7 +261,7 @@ export function FlashcardsGame({ set, items, settings, voice, onExit, teacher = 
   let showWord: boolean
   if (display === 'image_only') {
     showImage = true
-    showWord = set.show_word_on_answer && revealed
+    showWord = set.mode !== 'elementary' && set.show_word_on_answer && revealed
   } else if (display === 'word_only') {
     showImage = false
     showWord = true
@@ -269,7 +277,7 @@ export function FlashcardsGame({ set, items, settings, voice, onExit, teacher = 
   }
 
   return (
-    <GameShell teacher={teacher}
+    <GameShell teacher={teacher} screenMode={settings.screenMode}
       title={set.title}
       progress={{ current: position + 1, total: queue.length }}
       showProgress={settings.showProgress}
@@ -281,49 +289,52 @@ export function FlashcardsGame({ set, items, settings, voice, onExit, teacher = 
           return !v
         })
       }}
-      onExit={onExit}
+      onExit={requestExit}
       footer={
-        <div className="mx-auto flex max-w-3xl gap-2">
-          <Button size="lg" onClick={goPrev} disabled={position === 0} aria-label="前のカード">
+        <div className="mx-auto flex max-w-5xl flex-wrap gap-3">
+          <Button size="xl" onClick={goPrev} disabled={position === 0} aria-label="前のカード">
             ←
           </Button>
           {set.audio_enabled && (
-            <Button size="lg" onClick={playCurrent} aria-label="音を鳴らす" disabled={!audioOn}>
+            <Button size="xl" onClick={playCurrent} aria-label="音を鳴らす" disabled={!audioOn}>
               🔊
             </Button>
           )}
-          {display === 'image_only' && set.show_word_on_answer && (
-            <Button size="lg" onClick={() => setRevealed(true)} disabled={revealed}>
+          {set.mode !== 'elementary' && display === 'image_only' && set.show_word_on_answer && (
+            <Button size="xl" onClick={() => setRevealed(true)} disabled={revealed}>
               こたえを みる
             </Button>
           )}
           {twoSided && (
-            <Button size="lg" onClick={flip}>
+            <Button size="xl" onClick={flip}>
               うらを みる
             </Button>
           )}
           <Button
-            size="lg"
+            size="xl"
             onClick={toggleMark}
             aria-pressed={isMarked}
             className={isMarked ? 'border-warn-500 bg-warn-50 text-warn-700' : ''}
           >
             {isMarked ? '★ もういちど' : '☆ もういちど'}
           </Button>
-          <Button variant="primary" size="lg" block onClick={goNext} aria-label="次のカード">
+          <Button variant="primary" size="xl" className="min-w-32 flex-1" onClick={goNext} aria-label="次のカード">
             つぎへ →
           </Button>
         </div>
       }
     >
       <div
-        className="relative flex min-h-0 flex-1 cursor-pointer touch-manipulation flex-col items-center justify-center gap-4 rounded-2xl border-2 border-line bg-surface p-4"
+        className="relative flex min-h-0 flex-1 cursor-pointer touch-manipulation flex-col items-center justify-center gap-4 rounded-2xl border-2 border-line bg-surface px-[clamp(64px,12%,96px)] py-4"
         onPointerDown={onPointerDown}
         onPointerUp={onPointerUp}
+        onPointerCancel={() => { touchStart.current = null }}
         role="button"
         tabIndex={0}
-        aria-label="カード。右側をタップで次へ、左側で前へ"
+        aria-label="カード。中央と右の矢印でつぎへ、左の矢印でまえへ"
       >
+        <span aria-hidden="true" className={`pointer-events-none absolute inset-y-0 left-0 flex w-[clamp(64px,12%,96px)] items-center justify-center rounded-l-2xl bg-brand-50 text-4xl text-brand-700 ${position === 0 ? 'opacity-15' : 'opacity-50'}`}>←</span>
+        <span aria-hidden="true" className="pointer-events-none absolute inset-y-0 right-0 flex w-[clamp(64px,12%,96px)] items-center justify-center rounded-r-2xl bg-brand-50 text-4xl text-brand-700 opacity-50">→</span>
         {isMarked && (
           <span className="absolute left-3 top-3 rounded-lg bg-warn-500 px-2 py-1 text-sm font-bold text-white">
             ★
@@ -340,17 +351,9 @@ export function FlashcardsGame({ set, items, settings, voice, onExit, teacher = 
           ) : (
             <span className="flex flex-1 items-center text-ink-soft">画像なし</span>
           ))}
-        {showWord && (
-          <span
-            className={[
-              'break-all text-center font-bold leading-tight',
-              showImage ? 'shrink-0 text-4xl sm:text-5xl' : 'text-6xl sm:text-8xl',
-            ].join(' ')}
-          >
-            {word}
-          </span>
-        )}
+        {showWord && <GameWord word={word} mode={settings.screenMode} />}
       </div>
+      {exitDialog}
     </GameShell>
   )
 }

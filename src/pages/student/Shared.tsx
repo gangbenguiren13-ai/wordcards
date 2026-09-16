@@ -14,7 +14,7 @@ import { selectUsableCards } from '@/lib/usableCards'
 import { hasBlockingError, validateSet } from '@/lib/validation'
 import type { MaterialSet } from '@/types'
 import { SharedMini } from './SharedMini'
-import { GAME_NAMES, memoryCards, memorySettings, type MiniGame } from '@/games/shared/miniGames'
+import { STUDENT_GAME_NAMES, memoryCards, memorySettings, type MiniGame } from '@/games/shared/miniGames'
 
 export function SharedPage() {
   const { token = '' } = useParams()
@@ -86,10 +86,10 @@ function SharedSession({ token }: { token: string }) {
   const availableMini = (['memory', 'slowreveal'] as const).filter(game => publicData.set.games_config[game]?.enabledForStudents &&
     (game === 'memory' ? memoryCards(publicData.cards, memorySettings(publicData.set)).length >= 4 : publicData.cards.some(c => c.image_path)))
   if (mini) return <SharedMini token={token} set={publicData.set} game={mini} voice={voice} onBack={() => { setMini(null); void query.refetch() }} />
-  return <main className="mx-auto flex min-h-dvh max-w-lg flex-col justify-center gap-5 p-6 text-center">
+  return <main data-audience="student" className="mx-auto flex min-h-dvh max-w-lg flex-col justify-center gap-5 p-6 text-center">
     <h1 className="text-2xl font-bold">{query.data.set.title}</h1>
     {availableMini.length > 0 && <section className="flex flex-col gap-3"><h2 className="font-bold">ゲームをえらぶ</h2>
-      {availableMini.map(game => <Button key={game} size="xl" disabled={busy} onClick={() => setMini(game)}>{GAME_NAMES[game]}</Button>)}
+      {availableMini.map(game => <Button key={game} size="xl" disabled={busy} onClick={() => setMini(game)}>{STUDENT_GAME_NAMES[game]}で あそぶ</Button>)}
     </section>}
     {entry?.enabledForStudents && <p className="font-bold">フラッシュカード</p>}
     {error && <p role="alert" className="font-bold text-danger-700">{error}</p>}
@@ -109,6 +109,6 @@ function SharedSession({ token }: { token: string }) {
       </Button>
     </>}
     {busy && <LoadingProgress {...progress} label="カードの画像と音声を よみこみちゅう" />}
-    <p className="text-sm text-ink-soft">はじめに画像と音声をよみこみます。</p>
+    <p className="text-sm text-ink-soft">はじめに がぞうと おんせいを よみこみます。</p>
   </main>
 }

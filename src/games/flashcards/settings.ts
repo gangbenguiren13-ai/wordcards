@@ -1,7 +1,7 @@
 import type { DisplayMode, FlashcardsDefaults, MaterialSet } from '@/types'
 import { FLASHCARDS_DEFAULTS } from '@/lib/gameDefaults'
 
-export type FlashcardsSettings = FlashcardsDefaults
+export type FlashcardsSettings = FlashcardsDefaults & { screenMode?: 'handheld' | 'classroom' }
 
 const KEY = 'wordcards.flashcards.settings'
 
@@ -16,7 +16,10 @@ export function initialSettings(set: MaterialSet): FlashcardsSettings {
   }
   try {
     const saved = localStorage.getItem(KEY)
-    if (saved) return { ...base, ...(JSON.parse(saved) as Partial<FlashcardsSettings>) }
+    if (saved) {
+      const parsed = JSON.parse(saved) as Partial<FlashcardsSettings>
+      return { ...base, ...parsed, screenMode: parsed.screenMode === 'classroom' ? 'classroom' : 'handheld' }
+    }
   } catch {
     /* 保存できない環境では既定値のまま進む */
   }

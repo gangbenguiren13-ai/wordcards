@@ -221,15 +221,6 @@ export function SetEditPage() {
             </div>
           )}
 
-          {set.mode === 'elementary' && (
-            <Toggle
-              label="正解のときだけ単語を見せる"
-              description="ふだんは絵だけ。答え合わせのときに英単語を出します。"
-              checked={set.show_word_on_answer}
-              onChange={(v) => patchSet.mutate({ show_word_on_answer: v })}
-            />
-          )}
-
           <Toggle
             label="音声を使う"
             description="カードに登録した発音を、ゲーム中に鳴らせるようにします。"

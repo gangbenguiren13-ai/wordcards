@@ -168,7 +168,7 @@ function FlashcardsPlayPage() {
 
   return (
     <>
-      <AppHeader title={`${gameName}のせってい`} back={`/t/sets/${id}/play`} />
+      <AppHeader title={`${gameName}の設定`} back={`/t/sets/${id}/play`} />
       <main className="mx-auto flex max-w-2xl flex-col gap-3 p-4 pb-12">
         {usable.reason && (
           <p className="rounded-xl border-2 border-warn-500 bg-warn-50 p-3 text-sm font-bold text-warn-700">
@@ -177,7 +177,10 @@ function FlashcardsPlayPage() {
         )}
 
         <IssuePanel issues={validateSet({ title: set.title, mode: set.mode, gamesConfig: set.games_config, cards: cardsQuery.data ?? [] }).filter(i => i.level === 'warning')} />
-        <QuickStart feedback={<ActionError error={startError} onRetry={() => void start()} onDismiss={() => setStartError('')} />} game="flashcards" count={usable.usable.length} disabled={!usable.usable.length}
+        <QuickStart feedback={<ActionError error={startError} onRetry={() => void start()} onDismiss={() => setStartError('')} />} game="flashcards" controls={<SettingRow label="画面モード">
+          <ChoiceGroup value={settings.screenMode ?? 'handheld'} onChange={screenMode => patch({ screenMode })}
+            options={[{ value: 'classroom' as const, label: '教室で映す' }, { value: 'handheld' as const, label: '手元で使う' }]} />
+        </SettingRow>} count={usable.usable.length} disabled={!usable.usable.length}
           onStart={() => void start()} summary={[
             settings.order === 'random' ? 'ランダム' : '順番どおり',
             settings.advance === 'auto' ? `自動 ${settings.autoSeconds}秒` : '手で送る',

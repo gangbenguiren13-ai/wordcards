@@ -38,6 +38,7 @@ export function Button({
 }: Props) {
   return (
     <button
+      data-variant={variant}
       className={[
         'inline-flex items-center justify-center rounded-xl border-2 font-bold',
         'transition-colors disabled:opacity-40 disabled:cursor-not-allowed',

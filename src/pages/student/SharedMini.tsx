@@ -6,7 +6,7 @@ import { Button } from '@/components/ui'
 import { unlockAudio } from '@/lib/audio'
 import { preloadCards, releasePreloaded, type PreloadedCard } from '@/lib/preload'
 import { hasBlockingError, validateSet } from '@/lib/validation'
-import { memorySettings, revealSettings, pickMemoryCards, memoryCards, GAME_NAMES, type MiniGame } from '@/games/shared/miniGames'
+import { memorySettings, revealSettings, pickMemoryCards, memoryCards, STUDENT_GAME_NAMES, type MiniGame } from '@/games/shared/miniGames'
 import { MemorySettingsPanel, RevealSettingsPanel } from '@/games/shared/MiniSettings'
 import { MemoryGame } from '@/games/shared/MemoryGame'
 import { SlowRevealGame } from '@/games/shared/SlowRevealGame'
@@ -59,9 +59,9 @@ export function SharedMini({ token, set, game, voice, onBack }: {
   if (unavailable) return <StudentLoadError error={unavailable} onRetry={() => {}} />
   if (playing) return game === 'memory' ? <MemoryGame set={playing.set} items={playing.items} settings={playing.memory} voice={voice} onExit={onBack} />
     : <SlowRevealGame set={playing.set} items={playing.items} settings={playing.reveal} voice={voice} onExit={onBack} />
-  return <main className="mx-auto flex max-w-lg flex-col gap-4 p-5">
-    <Button onClick={onBack}>← ゲームえらびへ</Button><h1 className="text-center text-2xl font-bold">{GAME_NAMES[game]}</h1>
-    <p>{game === 'memory' ? '2まいずつ めくって、ペアを さがそう。' : '少しずつ見える絵を あててみよう。'}</p>
+  return <main data-audience="student" className="mx-auto flex max-w-lg flex-col gap-4 p-5">
+    <Button onClick={onBack}>← ゲームえらびへ</Button><h1 className="text-center text-2xl font-bold">{STUDENT_GAME_NAMES[game]}</h1>
+    <p>{game === 'memory' ? '2まいずつ めくって、ペアを さがそう。' : 'すこしずつ みえる えを あててみよう。'}</p>
     <fieldset disabled={busy}>{game === 'memory' ? <MemorySettingsPanel value={memory} onChange={setMemory} mode={set.mode} adjustable={set.games_config.memory?.studentAdjustable ?? []} />
       : <RevealSettingsPanel value={reveal} onChange={setReveal} mode={set.mode} adjustable={set.games_config.slowreveal?.studentAdjustable ?? []} />}</fieldset>
     {error && <p role="alert" className="font-bold text-danger-700">{error}</p>}
