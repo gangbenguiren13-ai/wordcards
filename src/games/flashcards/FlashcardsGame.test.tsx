@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { describe, expect, it, vi, beforeEach } from 'vitest'
-import { render, screen, fireEvent, cleanup } from '@testing-library/react'
+import { render, screen, fireEvent, cleanup, act, within } from '@testing-library/react'
 import { FlashcardsGame } from './FlashcardsGame'
 import { FLASHCARDS_DEFAULTS } from '@/lib/gameDefaults'
 import type { MaterialSet, Card, SetMode, DisplayMode } from '@/types'
@@ -111,7 +111,7 @@ describe('FlashcardsGame', () => {
     expect(screen.queryByText('dog')).toBeNull()
   })
 
-  it('小学校モードで「正解時のみ表示」なら、ボタンを押すと単語が出る', () => {
+  it('小学校モードは旧「正解時のみ表示」が残っていても単語を出さない', () => {
     render(
       <FlashcardsGame
         set={makeSet({ mode: 'elementary', show_word_on_answer: true })}
@@ -119,8 +119,10 @@ describe('FlashcardsGame', () => {
       />,
     )
     expect(screen.queryByText('dog')).toBeNull()
-    fireEvent.click(screen.getByText('こたえを みる'))
-    expect(screen.getByText('dog')).toBeDefined()
+    expect(screen.queryByText('こたえを みる')).toBeNull()
+    fireEvent.click(screen.getByText('☆ もういちど'))
+    fireEvent.click(screen.getByLabelText('次のカード'))
+    expect(screen.queryByText('dog')).toBeNull()
   })
 
   it('表裏モードでは、めくるまで裏の内容が出ない', () => {
@@ -163,4 +165,39 @@ describe('FlashcardsGame', () => {
     render(<FlashcardsGame set={makeSet()} items={[]} {...baseProps} />)
     expect(screen.getByText(/表示できるカードがありません/)).toBeDefined()
   })
+  it('中央タップは表裏モードでも次へ進み、連打しても戻らない', () => {
+    vi.stubGlobal('PointerEvent', MouseEvent)
+    render(<FlashcardsGame set={makeSet({ default_display: 'front_image_back_word' })} items={makeItems(['dog', 'cat', 'bird'])} {...baseProps} />)
+    const card = screen.getByRole('button', { name: /カード。中央/ })
+    vi.spyOn(card, 'getBoundingClientRect').mockReturnValue({ left: 0, width: 1000 } as DOMRect)
+    const tap = (x: number) => { fireEvent.pointerDown(card, { clientX: x, clientY: 100 }); fireEvent.pointerUp(card, { clientX: x, clientY: 100 }) }
+    tap(500); tap(500); tap(500)
+    expect(screen.getByText('2／3')).toBeDefined()
+    expect(screen.queryByText('cat')).toBeNull()
+    fireEvent.click(screen.getByText('うらを みる')); expect(screen.getByText('cat')).toBeDefined()
+    vi.spyOn(Date, 'now').mockReturnValue(Date.now() + 1000)
+    tap(10); expect(screen.getByText('1／3')).toBeDefined()
+    vi.restoreAllMocks(); vi.unstubAllGlobals()
+  })
+  it('やめるの確認中は自動送りとキー操作を止め、キャンセルで続けられる', () => {
+    vi.useFakeTimers()
+    const exit = vi.fn()
+    render(<FlashcardsGame set={makeSet()} items={makeItems(['dog', 'cat'])} {...baseProps} onExit={exit} settings={{ ...baseProps.settings, advance: 'auto', autoSeconds: 1 }} />)
+    fireEvent.click(screen.getByRole('button', { name: 'ゲームをやめる' }))
+    act(() => vi.advanceTimersByTime(5000)); fireEvent.keyDown(window, { key: 'ArrowRight' })
+    expect(screen.getByText('dog')).toBeDefined(); expect(exit).not.toHaveBeenCalled()
+    fireEvent.click(screen.getByRole('button', { name: 'ゲームをつづける' }))
+    act(() => vi.advanceTimersByTime(1000)); expect(screen.getByText('cat')).toBeDefined()
+    fireEvent.click(screen.getByRole('button', { name: 'ゲームをやめる' }))
+    fireEvent.click(within(screen.getByRole('dialog')).getByRole('button', { name: 'ゲームをやめる' }))
+    expect(exit).toHaveBeenCalledOnce()
+    cleanup(); vi.useRealTimers()
+  })
+  it('教室用は12vhを基準にし、退出と音声を下部へ集約する', () => {
+    render(<FlashcardsGame teacher set={makeSet({ audio_enabled: true })} items={makeItems(['dog'])} {...baseProps} settings={{ ...baseProps.settings, screenMode: 'classroom' }} />)
+    expect(screen.getByText('dog').style.fontSize).toBe(`${window.innerHeight * 0.12}px`)
+    expect(screen.getByRole('button', { name: 'ゲームをやめる' }).closest('footer')).not.toBeNull()
+    expect(screen.getByRole('button', { name: '音を消す' }).closest('footer')).not.toBeNull()
+  })
+
 })
