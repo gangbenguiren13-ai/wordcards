@@ -5,6 +5,7 @@ interface Props {
   open: boolean
   title: string
   children?: ReactNode
+  feedback?: ReactNode
   confirmLabel?: string
   cancelLabel?: string
   danger?: boolean
@@ -18,7 +19,8 @@ export function Dialog({
   open,
   title,
   children,
-  confirmLabel = 'OK',
+  feedback,
+  confirmLabel = '実行する',
   cancelLabel = 'キャンセル',
   danger,
   busy,
@@ -79,6 +81,7 @@ export function Dialog({
             {busy ? '処理中…' : confirmLabel}
           </Button>
         </div>
+        {feedback}
       </div>
     </div>
   )
