@@ -23,6 +23,7 @@ export function registerToast(fn: typeof showToast) {
 const queryClient = new QueryClient({
   mutationCache: new MutationCache({
     onError: (error) => showToast(toJapaneseError(error), 'error'),
+    onSuccess: () => showToast('保存しました', 'success'),
   }),
   defaultOptions: {
     queries: { retry: 1, refetchOnWindowFocus: false, staleTime: 30_000 },
