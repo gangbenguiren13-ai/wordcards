@@ -1,3 +1,5 @@
+import { ActionError } from '@/components/ActionError'
+import { LoadingProgress } from '@/components/LoadingProgress'
 import { rememberUsed } from '@/lib/recentSets'
 import { QuickStart, rememberStarted } from '@/games/shared/QuickStart'
 import { useEffect, useMemo, useRef, useState } from 'react'
@@ -10,7 +12,7 @@ import { selectUsableCards } from '@/lib/usableCards'
 import { AppHeader } from '@/components/AppHeader'
 import { LoadError } from '@/components/LoadError'
 import { hasBlockingError, validateSet } from '@/lib/validation'
-import { Button, Spinner, Toggle } from '@/components/ui'
+import { Button, Spinner, Toggle, IssuePanel } from '@/components/ui'
 import { ChoiceGroup, SettingRow, Stepper } from '@/games/shared/SettingsPanel'
 import { FlashcardsGame } from '@/games/flashcards/FlashcardsGame'
 import { effectiveDisplay, initialSettings, rememberSettings, type FlashcardsSettings } from '@/games/flashcards/settings'
@@ -34,6 +36,7 @@ function FlashcardsPlayPage() {
   const navigate = useNavigate()
   const toast = useToast()
   const startLock = useRef(false)
+  const [startError, setStartError] = useState('')
 
   const setQuery = useQuery({ queryKey: ['set', id], queryFn: () => getSet(id) })
   const cardsQuery = useQuery({ queryKey: ['cards', id], queryFn: () => getCards(id) })
@@ -119,6 +122,8 @@ function FlashcardsPlayPage() {
     startLock.current = true
     // 音を出す権利はユーザー操作の中でしか得られない。開始ボタンがその機会になる
     setStage('loading')
+    setStartError('')
+    setProgress({ done: 0, total: usable.usable.length })
     try {
       await unlockAudio()
       const paths = usable.usable.flatMap((c) => [c.image_path, c.audio_path])
@@ -126,7 +131,8 @@ function FlashcardsPlayPage() {
       const result = await preloadCards(usable.usable, urls, setProgress)
       if (result.failures.length > 0) {
         releasePreloaded(result.items)
-        toast.show('画像や音声を読み込めませんでした。通信を確認して、もう一度「はじめる」を押してください。')
+        const message = '画像や音声を読み込めませんでした。通信を確認して、もう一度「はじめる」を押してください。'
+        setStartError(message); toast.show(message)
         setStage('settings')
         return
       }
@@ -136,14 +142,14 @@ function FlashcardsPlayPage() {
       rememberUsed(set.owner_id, set.id)
       setStage('playing')
     } catch (e) {
-      toast.show(toJapaneseError(e))
+      setStartError(toJapaneseError(e)); toast.show(toJapaneseError(e))
       setStage('settings')
     } finally { startLock.current = false }
   }
 
   if (stage === 'playing') {
     return (
-      <FlashcardsGame
+      <FlashcardsGame teacher
         set={set}
         items={items}
         settings={settings}
@@ -153,23 +159,10 @@ function FlashcardsPlayPage() {
     )
   }
 
-  if (stage === 'loading') {
-    const pct = progress.total ? Math.round((progress.done / progress.total) * 100) : 0
-    return (
-      <main className="mx-auto flex min-h-dvh max-w-md flex-col items-center justify-center gap-4 p-6">
-        <p className="text-xl font-bold">よみこみちゅう…</p>
-        <div className="h-4 w-full overflow-hidden rounded-full bg-line">
-          <div className="h-full bg-brand-500 transition-[width]" style={{ width: `${pct}%` }} />
-        </div>
-        <p className="tabular-nums text-ink-soft">
-          {progress.done} / {progress.total}
-        </p>
-        <p className="text-center text-sm text-ink-soft">
-          さきに全部よみこむので、とちゅうで通信が切れても続けられます。
-        </p>
-      </main>
-    )
-  }
+  if (stage === 'loading') return <main className="mx-auto flex min-h-dvh max-w-lg flex-col justify-center p-6">
+    <LoadingProgress {...progress} label="カードの画像と音声を よみこみちゅう" />
+    <p className="text-center">さきに全部よみこむので、とちゅうで通信が切れても続けられます。</p>
+  </main>
 
   const gameName = game === 'flashcards' ? 'フラッシュカード' : game
 
@@ -183,7 +176,8 @@ function FlashcardsPlayPage() {
           </p>
         )}
 
-        <QuickStart game="flashcards" count={usable.usable.length} disabled={!usable.usable.length}
+        <IssuePanel issues={validateSet({ title: set.title, mode: set.mode, gamesConfig: set.games_config, cards: cardsQuery.data ?? [] }).filter(i => i.level === 'warning')} />
+        <QuickStart feedback={<ActionError error={startError} onRetry={() => void start()} onDismiss={() => setStartError('')} />} game="flashcards" count={usable.usable.length} disabled={!usable.usable.length}
           onStart={() => void start()} summary={[
             settings.order === 'random' ? 'ランダム' : '順番どおり',
             settings.advance === 'auto' ? `自動 ${settings.autoSeconds}秒` : '手で送る',

@@ -10,6 +10,8 @@ export interface ToastItem {
 
 export interface ToastApi {
   show: (message: string, kind?: ToastKind) => void
+  saved?: boolean
+  setGameRole?: (role: 'teacher' | 'student' | null) => void
 }
 
 export const ToastContext = createContext<ToastApi>({ show: () => {} })

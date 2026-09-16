@@ -1,3 +1,4 @@
+import { LoadingProgress } from '@/components/LoadingProgress'
 import { useEffect, useRef, useState } from 'react'
 import { useParams } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
@@ -107,8 +108,7 @@ function SharedSession({ token }: { token: string }) {
         {busy ? 'よみこみちゅう…' : error ? 'もういちど はじめる' : '▶ はじめる'}
       </Button>
     </>}
-    {busy && <div role="status"><progress className="w-full" value={progress.done} max={progress.total || 1} />
-      <p>{progress.done} / {progress.total}</p></div>}
+    {busy && <LoadingProgress {...progress} label="カードの画像と音声を よみこみちゅう" />}
     <p className="text-sm text-ink-soft">はじめに画像と音声をよみこみます。</p>
   </main>
 }

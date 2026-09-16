@@ -1,7 +1,9 @@
+import { useLocation } from 'react-router-dom'
 import { useEffect, useState } from 'react'
 
 /** 通信が切れたことを常時知らせる（授業中の切り分けを早くするため） */
 export function OfflineBanner() {
+  const { pathname } = useLocation()
   const [online, setOnline] = useState(() =>
     typeof navigator === 'undefined' ? true : navigator.onLine,
   )
@@ -17,7 +19,7 @@ export function OfflineBanner() {
     }
   }, [])
 
-  if (online) return null
+  if (online || pathname.startsWith('/p/')) return null
   return (
     <div
       role="status"

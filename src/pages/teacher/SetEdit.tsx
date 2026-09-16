@@ -1,3 +1,6 @@
+import { ActionError, MutationError } from '@/components/ActionError'
+import { useActionFeedback } from '@/components/useActionFeedback'
+import { LoadError } from '@/components/LoadError'
 import { useMemo, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
@@ -28,12 +31,12 @@ export function SetEditPage() {
   const qc = useQueryClient()
   const navigate = useNavigate()
   const toast = useToast()
+  const feedback = useActionFeedback()
   const { user } = useAuth()
   const [deleteSetOpen, setDeleteSetOpen] = useState(false)
   const [transientIssues, setTransientIssues] = useState<Issue[]>([])
   const [busyCardId, setBusyCardId] = useState<string | null>(null)
   const [deleteTarget, setDeleteTarget] = useState<Card | null>(null)
-  const [uploadNote, setUploadNote] = useState<string | null>(null)
 
   const setQuery = useQuery({ queryKey: ['set', id], queryFn: () => getSet(id) })
   const cardsQuery = useQuery({ queryKey: ['cards', id], queryFn: () => getCards(id) })
@@ -86,39 +89,23 @@ export function SetEditPage() {
 
   async function handleImage(card: Card, file: File, kind: 'image' | 'pair' = 'image') {
     if (!user) return
-    setBusyCardId(card.id)
-    setUploadNote(null)
-    try {
-      const r = await attachImage(user.id, card, file, kind)
-      setUploadNote(
-        `「${file.name}」を取り込みました（${Math.round(r.originalBytes / 1024)}KB → ${Math.round(r.storedBytes / 1024)}KB）`,
-      )
-      await refreshCards()
-    } catch (e) {
-      setTransientIssues((prev) => [
-        ...prev,
-        {
-          level: 'error',
-          code: 'UNSUPPORTED_FORMAT',
-          message: `「${file.name}」を取り込めませんでした：${(e as Error).message}`,
-        },
-      ])
-    } finally {
-      setBusyCardId(null)
-    }
+    await feedback.run(card.id, async () => {
+      setBusyCardId(card.id)
+      try { await attachImage(user.id, card, file, kind); await refreshCards() }
+      finally { setBusyCardId(null) }
+    })
   }
-
   async function handleAudio(card: Card, file: File) {
     if (!user) return
-    setBusyCardId(card.id)
-    try {
-      await attachAudio(user.id, card, file)
-      await refreshCards()
-    } finally {
-      setBusyCardId(null)
-    }
+    await feedback.run(card.id, async () => {
+      setBusyCardId(card.id)
+      try { await attachAudio(user.id, card, file); await refreshCards() }
+      finally { setBusyCardId(null) }
+    })
   }
-
+  function removeMedia(card: Card, kind: 'image' | 'audio' | 'pair') {
+    return feedback.run(card.id, async () => { await detachMedia(card, kind); await refreshCards() })
+  }
   function move(index: number, direction: -1 | 1) {
     const next = [...cards]
     const target = index + direction
@@ -156,6 +143,8 @@ export function SetEditPage() {
       }),
     ]
   }, [set, cards, transientIssues])
+
+  if (setQuery.isError || cardsQuery.isError) return <><AppHeader back="/t/home" /><LoadError retrying={setQuery.isFetching || cardsQuery.isFetching} onRetry={() => { void setQuery.refetch(); void cardsQuery.refetch() }} /></>
 
   if (setQuery.isLoading || cardsQuery.isLoading) {
     return (
@@ -247,16 +236,11 @@ export function SetEditPage() {
             checked={set.audio_enabled}
             onChange={(v) => patchSet.mutate({ audio_enabled: v })}
           />
+          <MutationError mutation={patchSet} />
         </section>
 
         {/* ---------- 確認事項 ---------- */}
         <IssuePanel issues={issues} />
-        {uploadNote && (
-          <p className="rounded-xl border-2 border-ok-500 bg-ok-50 p-3 text-sm font-bold text-ok-700">
-            ✓ {uploadNote}
-          </p>
-        )}
-
         {/* ---------- カード ---------- */}
         <section className="flex flex-col gap-3">
           <div className="flex flex-wrap items-center gap-2">
@@ -277,6 +261,7 @@ export function SetEditPage() {
             </div>
           </div>
 
+          <MutationError mutation={reorder} />
           {cards.length === 0 && (
             <p className="rounded-2xl border-2 border-dashed border-line p-8 text-center text-ink-soft">
               まだカードがありません。「＋ カードを追加」から始めてください。
@@ -293,19 +278,23 @@ export function SetEditPage() {
                 imageUrl={card.image_path ? urls.data?.[card.image_path] : undefined}
                 audioUrl={card.audio_path ? urls.data?.[card.audio_path] : undefined}
                 pairImageUrl={card.pair_image_path ? urls.data?.[card.pair_image_path] : undefined}
+                feedback={<>
+                  {editCard.variables?.cardId === card.id && <MutationError mutation={editCard} />}
+                  <ActionError error={feedback.errors[card.id]?.message} onRetry={feedback.errors[card.id]?.retry} onDismiss={() => feedback.clear(card.id)} busy={busyCardId === card.id} />
+                </>}
                 onPickPair={(file) => void handleImage(card, file, 'pair')}
-                onRemovePair={() => void detachMedia(card, 'pair').then(refreshCards).catch(() => toast.show('関連画像を外せませんでした。通信を確認して、もう一度お試しください。'))}
+                onRemovePair={() => void removeMedia(card, 'pair')}
                 busy={busyCardId === card.id}
                 onWordChange={(word) =>
                   editCard.mutate({ cardId: card.id, patch: { word } })
                 }
                 onPickImage={(file) => void handleImage(card, file)}
                 onPickAudio={(file) => void handleAudio(card, file)}
-                onRemoveImage={() => void detachMedia(card, 'image').then(refreshCards)}
-                onRemoveAudio={() => void detachMedia(card, 'audio').then(refreshCards)}
+                onRemoveImage={() => void removeMedia(card, 'image')}
+                onRemoveAudio={() => void removeMedia(card, 'audio')}
                 onMove={(d) => move(index, d)}
                 onDelete={() => setDeleteTarget(card)}
-                onFileRejected={(issue) => setTransientIssues((p) => [...p, issue])}
+                onFileRejected={(issue) => feedback.fail(card.id, issue.message)}
               />
             ))}
           </ul>
@@ -320,6 +309,7 @@ export function SetEditPage() {
           >
             カードを追加
           </Button>
+          <MutationError mutation={addCard} />
           {cards.length >= CARDS_HARD_LIMIT && (
             <p className="text-center text-sm font-bold text-danger-700">
               ⚠ 1つの教材セットに入れられるのは{CARDS_HARD_LIMIT}枚までです。
@@ -351,6 +341,7 @@ export function SetEditPage() {
       </main>
 
       <Dialog
+        feedback={<MutationError mutation={removeSet} />}
         open={deleteSetOpen}
         title="この教材セットをゴミ箱に入れますか？"
         confirmLabel="ゴミ箱に入れる"
@@ -366,6 +357,7 @@ export function SetEditPage() {
       </Dialog>
 
       <Dialog
+        feedback={<MutationError mutation={removeCard} />}
         open={Boolean(deleteTarget)}
         title="このカードを削除しますか？"
         confirmLabel="削除する"

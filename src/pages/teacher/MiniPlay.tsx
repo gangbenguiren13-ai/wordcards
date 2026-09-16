@@ -1,3 +1,6 @@
+import { ActionError } from '@/components/ActionError'
+import { LoadingProgress } from '@/components/LoadingProgress'
+import { useToast } from '@/components/toast/useToast'
 import { rememberUsed } from '@/lib/recentSets'
 import { lastMemorySettings, lastRevealSettings, rememberMiniSettings } from '@/games/shared/lastMiniSettings'
 import { QuickStart, rememberStarted } from '@/games/shared/QuickStart'
@@ -12,7 +15,7 @@ import { hasBlockingError, validateSet } from '@/lib/validation'
 import { toJapaneseError } from '@/lib/errorMessage'
 import { AppHeader } from '@/components/AppHeader'
 import { LoadError } from '@/components/LoadError'
-import { Button, Spinner, Toggle } from '@/components/ui'
+import { Button, Spinner, Toggle, IssuePanel } from '@/components/ui'
 import { MemorySettingsPanel, RevealSettingsPanel } from '@/games/shared/MiniSettings'
 import { memoryCards, pickMemoryCards, GAME_NAMES, type MiniGame } from '@/games/shared/miniGames'
 import { MemoryGame } from '@/games/shared/MemoryGame'
@@ -29,6 +32,8 @@ export function MiniPlayPage({ game }: { game: MiniGame }) {
 }
 
 function MiniSetup({ set, cards, game }: { set: MaterialSet; cards: Card[]; game: MiniGame }) {
+  const toast = useToast()
+  const [failedAction, setFailedAction] = useState<'start' | 'save'>('start')
   const navigate = useNavigate()
   const qc = useQueryClient()
   const [memory, setMemory] = useState(() => lastMemorySettings(set))
@@ -36,7 +41,6 @@ function MiniSetup({ set, cards, game }: { set: MaterialSet; cards: Card[]; game
   const [enabled, setEnabled] = useState(set.games_config[game]?.enabledForStudents ?? false)
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
-  const [notice, setNotice] = useState('')
   const [voice, setVoice] = useState<SpeechSynthesisVoice | null>(null)
   const [progress, setProgress] = useState({ done: 0, total: 0 })
   const [playing, setPlaying] = useState<{ items: PreloadedCard[]; memory: MemoryDefaults; reveal: SlowRevealDefaults } | null>(null)
@@ -49,7 +53,7 @@ function MiniSetup({ set, cards, game }: { set: MaterialSet; cards: Card[]; game
   const insufficient = game === 'memory' ? usable.length < memory.cardCount / 2 : usable.length === 0
   async function start() {
     if (lock.current) return
-    lock.current = true; setBusy(true); setError('')
+    lock.current = true; setBusy(true); setError(''); setFailedAction('start'); setProgress({ done: 0, total: game === 'memory' ? memory.cardCount / 2 : usable.length })
     try {
       await unlockAudio()
       const selected = game === 'memory' ? pickMemoryCards(cards, memory) : usable
@@ -61,12 +65,12 @@ function MiniSetup({ set, cards, game }: { set: MaterialSet; cards: Card[]; game
       rememberStarted(`${game}:${set.id}`)
       rememberUsed(set.owner_id, set.id)
       setPlaying({ items: result.items, memory, reveal })
-    } catch (e) { if (alive.current) setError(toJapaneseError(e)) }
+    } catch (e) { if (alive.current) { setError(toJapaneseError(e)); toast.show(toJapaneseError(e)) } }
     finally { lock.current = false; if (alive.current) setBusy(false) }
   }
   async function save() {
     if (lock.current) return
-    lock.current = true; setBusy(true); setError(''); setNotice('')
+    lock.current = true; setBusy(true); setError(''); setFailedAction('save')
     try {
       const latest = await getSet(set.id)
       const config = { ...latest.games_config }
@@ -75,15 +79,16 @@ function MiniSetup({ set, cards, game }: { set: MaterialSet; cards: Card[]; game
       await updateSet(set.id, { games_config: config })
       qc.setQueryData(['set', set.id], { ...latest, games_config: config })
       void qc.invalidateQueries({ queryKey: ['sets'] })
-      if (alive.current) setNotice('この設定を保存しました。共有リンクにも反映されます。')
-    } catch (e) { if (alive.current) setError(toJapaneseError(e)) }
+      if (alive.current) toast.show('保存しました', 'success')
+    } catch (e) { if (alive.current) { setError(toJapaneseError(e)); toast.show(toJapaneseError(e)) } }
     finally { lock.current = false; if (alive.current) setBusy(false) }
   }
-  if (playing) return game === 'memory' ? <MemoryGame set={set} items={playing.items} settings={playing.memory} voice={voice} onExit={() => navigate(`/t/sets/${set.id}/play`)} />
+  if (playing) return game === 'memory' ? <MemoryGame teacher set={set} items={playing.items} settings={playing.memory} voice={voice} onExit={() => navigate(`/t/sets/${set.id}/play`)} />
     : <SlowRevealGame set={set} items={playing.items} settings={playing.reveal} voice={voice} teacher onExit={() => navigate(`/t/sets/${set.id}/play`)} />
   return <><AppHeader title={`${GAME_NAMES[game]}のせってい`} back={`/t/sets/${set.id}/play`} />
     <main className="mx-auto flex max-w-2xl flex-col gap-4 p-4 pb-12">
-      <QuickStart game={`${game}:${set.id}`} count={game === 'memory' ? memory.cardCount : usable.length}
+      <IssuePanel issues={validateSet({ title: set.title, mode: set.mode, gamesConfig: set.games_config, cards }).filter(i => i.level === 'warning')} />
+      <QuickStart feedback={<>{/* 折りたたんでも開始できない理由を隠さない */}{insufficient && <p role="alert">{game === 'memory' ? `${memory.cardCount}枚で遊ぶには${memory.cardCount / 2}件の教材カードが必要です。枚数を減らすか、カードを追加してください。` : '画像のあるカードを追加してください。'}</p>}{blocked && <p role="alert">教材の未入力・エラーを直してから始めてください。</p>}{failedAction === 'start' && <ActionError error={error} onRetry={() => void start()} onDismiss={() => setError('')} busy={busy} />}</>} game={`${game}:${set.id}`} count={game === 'memory' ? memory.cardCount : usable.length}
         busy={busy} disabled={blocked || insufficient} onStart={() => void start()}
         summary={game === 'memory' ? `${memory.pick === 'random' ? 'ランダム' : '先頭から'}・${memory.teams === 1 ? '協力' : `${memory.teams}チーム対抗`}・${memory.timeLimitMinutes ? `${memory.timeLimitMinutes}分` : '時間制限なし'}・${set.audio_enabled && memory.audioOnMatch ? 'そろったら音声' : '自動音声なし'}`
           : `${reveal.order === 'random' ? 'ランダム' : '順番どおり'}・${reveal.advance === 'manual' ? '手で開く' : `自動 ${reveal.autoSeconds}秒`}・${reveal.steps}段階`}>
@@ -92,13 +97,11 @@ function MiniSetup({ set, cards, game }: { set: MaterialSet; cards: Card[]; game
       </fieldset>
       </QuickStart>
       <p>{game === 'memory' ? '2枚ずつめくってペアを探します。そろうと同じチームが続けられます。' : '画像が少しずつ開きます。答えを予想してから「せいかい を みる」を押します。'}</p>
-      {error && <p role="alert" className="font-bold text-danger-700">{error}</p>}{notice && <p role="status">{notice}</p>}
       <p>使えるカード：{usable.length}件{cards.length > usable.length ? `（画像などが足りない${cards.length - usable.length}件は除外）` : ''}</p>
-      {insufficient && <p role="alert">{game === 'memory' ? `${memory.cardCount}枚で遊ぶには${memory.cardCount / 2}件の教材カードが必要です。枚数を減らすか、カードを追加してください。` : '画像のあるカードを追加してください。'}</p>}
-      {blocked && <p role="alert">教材の未入力・エラーを直してから始めてください。</p>}
 
-      {busy && <progress aria-label="読み込み" value={progress.done} max={progress.total || 1} />}
+      {busy && <LoadingProgress {...(failedAction === 'start' ? progress : {})} label={failedAction === 'start' ? 'カードの画像と音声を よみこみちゅう' : '設定を保存しています'} />}
       <fieldset disabled={busy} className="flex flex-col gap-3 rounded-xl border-2 border-line p-4"><Toggle label="生徒の共有画面でこのゲームを使えるようにする" checked={enabled} onChange={setEnabled} />
-        <Button onClick={() => void save()}>この設定を教材に保存</Button><p className="text-sm text-ink-soft">保存すると、次に開くときと生徒用リンクに反映されます。</p></fieldset>
+        <Button onClick={() => void save()}>この設定を教材に保存</Button>
+        {failedAction === 'save' && <ActionError error={error} onRetry={() => void save()} onDismiss={() => setError('')} busy={busy} />}<p className="text-sm text-ink-soft">保存すると、次に開くときと生徒用リンクに反映されます。</p></fieldset>
     </main></>
 }

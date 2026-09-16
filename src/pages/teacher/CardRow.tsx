@@ -1,9 +1,10 @@
-import { useRef, useState } from 'react'
+import { useRef, useState, type ReactNode } from 'react'
 import type { Card } from '@/types'
 import { Button } from '@/components/ui'
 import { checkUploadFile, formatBytes, type Issue } from '@/lib/validation'
 
 interface Props {
+  feedback?: ReactNode
   card: Card
   index: number
   total: number
@@ -25,6 +26,7 @@ interface Props {
 
 export function CardRow({
   card,
+  feedback,
   index,
   total,
   imageUrl,
@@ -139,6 +141,7 @@ export function CardRow({
             </button>
           )}
         </div>
+        {feedback}
         {audioUrl && (
           <audio src={audioUrl} controls preload="none" className="mt-1 h-8 w-full max-w-56" />
         )}
