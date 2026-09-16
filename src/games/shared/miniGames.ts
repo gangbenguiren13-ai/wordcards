@@ -4,6 +4,7 @@ import { selectUsableCards } from '@/lib/usableCards'
 import { effectiveDisplay } from '@/games/flashcards/settings'
 
 export type MiniGame = 'memory' | 'slowreveal'
+export const STUDENT_GAME_NAMES = { flashcards: 'フラッシュカード', memory: 'しんけいすいじゃく', slowreveal: 'ゆっくりみえるゲーム' }
 export const GAME_NAMES = { flashcards: 'フラッシュカード', memory: '神経衰弱', slowreveal: 'Slow Reveal' }
 export function shuffled<T>(items: T[]): T[] {
   const out = [...items]

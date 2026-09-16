@@ -78,11 +78,11 @@ export function MemoryGame({ set, items, settings: s, voice, onExit, teacher = f
       if (!match && (s.timeLimitMinutes === null || Date.now() - started.current! < s.timeLimitMinutes * 60000)) setTeam(t => (t + 1) % s.teams)
     }, match ? 350 : 900)
   }
-  return <GameShell teacher={teacher} title="神経衰弱" onExit={() => { silence(); setExit(true) }} audioEnabled={set.audio_enabled} audioOn={audioOn}
+  return <GameShell teacher={teacher} title={teacher ? '神経衰弱' : 'しんけいすいじゃく'} onExit={() => { silence(); setExit(true) }} audioEnabled={set.audio_enabled} audioOn={audioOn}
     onToggleAudio={() => { setAudioOn(!audioOn); silence() }}
     footer={ended && !showResults ? <div className="flex flex-wrap items-center justify-center gap-3 text-center">
       <h2 className="text-xl font-bold" role="status">{matched.length === items.length ? 'ぜんぶ そろった！' : 'じかんです！'}</h2>
-      <Button variant="primary" onClick={() => { silence(); setShowResults(true) }}>結果を見る</Button>
+      <Button variant="primary" onClick={() => { silence(); setShowResults(true) }}>{teacher ? '結果を見る' : 'けっかを みる'}</Button>
     </div> : undefined}>
     <div className="sticky top-0 z-10 flex flex-wrap justify-center gap-2 bg-canvas p-2" aria-live="polite">
       {scores.map((score, i) => <p key={i} className={`rounded-xl border-2 p-2 font-bold ${i === team && !ended ? 'border-brand-500 bg-brand-50' : 'border-line'}`}>
@@ -91,12 +91,12 @@ export function MemoryGame({ set, items, settings: s, voice, onExit, teacher = f
     </div>
     {teacher && audioError && <p role="alert" className="p-2 text-center text-danger">{audioError}</p>}
     {showResults ? <section className="flex flex-1 flex-col items-center justify-center gap-5 p-6 text-center">
-      <h2 className="text-3xl font-bold">結果</h2>
+      <h2 className="text-3xl font-bold">{teacher ? '結果' : 'けっか'}</h2>
       <p>{matched.length} / {items.length}ペア・{elapsed}秒</p>
-      <Button onClick={() => setShowResults(false)}>カードに戻る</Button>
+      <Button onClick={() => setShowResults(false)}>{teacher ? 'カードに戻る' : 'カードに もどる'}</Button>
       <Button variant="primary" onClick={onExit}>ゲームえらびへ</Button>
     </section> : <>
-    {set.audio_enabled && <p className="pb-2 text-center text-sm">{audioOn ? 'そろったカードを押すと、もう一度聞けます。' : '聞き直すときは「音を出す」を押してください。'}</p>}
+    {set.audio_enabled && <p className="pb-2 text-center text-sm">{audioOn ? 'そろったカードを おすと、もういちど きけます。' : '聞き直すときは「音を出す」を押してください。'}</p>}
     <div className={`mx-auto grid w-full max-w-6xl gap-2 ${board.length === 20 ? 'grid-cols-4 landscape:grid-cols-5' : 'grid-cols-4'}`}>
       {board.map((tile, i) => {
         const faceUp = (!ended && open.includes(i)) || matched.includes(tile.item.card.id)

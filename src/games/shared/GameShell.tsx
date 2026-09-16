@@ -1,3 +1,4 @@
+import type { ScreenMode } from './GameWord'
 import { useToast } from '@/components/toast/useToast'
 import { useEffect, type ReactNode } from 'react'
 import { Button } from '@/components/ui'
@@ -11,6 +12,7 @@ import { Button } from '@/components/ui'
 export function GameShell({
   title,
   teacher = false,
+  screenMode = 'handheld',
   progress,
   showProgress,
   audioEnabled,
@@ -22,6 +24,7 @@ export function GameShell({
 }: {
   title: string
   teacher?: boolean
+  screenMode?: ScreenMode
   progress?: { current: number; total: number }
   showProgress?: boolean
   audioEnabled?: boolean
@@ -47,37 +50,22 @@ export function GameShell({
     return () => window.removeEventListener('beforeunload', onBeforeUnload)
   }, [])
 
-  return (
-    <div className="no-select flex h-dvh flex-col bg-canvas">
-      <header className="flex shrink-0 items-center gap-2 border-b-2 border-line bg-surface p-2 pt-safe">
-        <Button onClick={onExit} aria-label="ゲームをやめる">
-          ← やめる
-        </Button>
-        <h1 className="min-w-0 flex-1 truncate text-center text-base font-bold">{title}</h1>
-        <div className="flex items-center gap-2">
-          {showProgress && progress && (
-            <span className="rounded-lg bg-canvas px-3 py-1.5 text-base font-bold tabular-nums">
-              {progress.current}／{progress.total}
-            </span>
-          )}
-          {audioEnabled && onToggleAudio && (
-            <Button
-              onClick={onToggleAudio}
-              aria-label={audioOn ? '音を消す' : '音を出す'}
-              aria-pressed={audioOn}
-              className={audioOn ? 'border-brand-500 bg-brand-50' : ''}
-            >
-              {audioOn ? '🔊 音あり' : '🔇 音なし'}
-            </Button>
-          )}
-        </div>
-      </header>
-
-      <main className="flex min-h-0 flex-1 flex-col overflow-y-auto p-3">{children}</main>
-
-      {footer && (
-        <footer className="shrink-0 border-t-2 border-line bg-surface p-3 pb-safe">{footer}</footer>
-      )}
-    </div>
-  )
+  const classroom = screenMode === 'classroom'
+  const exitButton = <Button size="xl" onClick={onExit} aria-label="ゲームをやめる">← やめる</Button>
+  const audioButton = audioEnabled && onToggleAudio && <Button size="xl" onClick={onToggleAudio}
+    aria-label={audioOn ? '音を消す' : '音を出す'} aria-pressed={audioOn} className={audioOn ? 'border-brand-500 bg-brand-50' : ''}>
+    {audioOn ? '🔊 音あり' : '🔇 音なし'}</Button>
+  return <div data-audience={teacher ? 'teacher' : 'student'} data-screen-mode={screenMode} className="game-shell no-select flex h-dvh flex-col bg-canvas">
+    <header className="flex shrink-0 flex-wrap items-center gap-3 border-b-2 border-line bg-surface p-4">
+      {!classroom && exitButton}
+      <h1 className="min-w-0 flex-1 truncate text-center text-xl font-bold">{title}</h1>
+      {showProgress && progress && <span className={`rounded-lg bg-canvas px-3 py-2 font-bold tabular-nums ${classroom ? 'text-[28px]' : 'text-xl'}`}>{progress.current}／{progress.total}</span>}
+      {!classroom && audioButton}
+    </header>
+    <main className="flex min-h-0 flex-1 flex-col overflow-y-auto p-4">{children}</main>
+    {(footer || classroom) && <footer className="shrink-0 border-t-2 border-line bg-surface p-4 pb-safe">
+      {footer}
+      {classroom && <div className="mt-3 flex flex-wrap justify-between gap-3">{exitButton}{audioButton}</div>}
+    </footer>}
+  </div>
 }
