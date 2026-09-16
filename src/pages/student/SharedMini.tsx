@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
-import { fetchSharedSet, sharedGameData } from '@/api/shared'
+import { fetchSharedSet, sharedGameData, SharedError } from '@/api/shared'
+import { StudentLoadError } from '@/components/StudentLoadError'
 import { Button } from '@/components/ui'
 import { unlockAudio } from '@/lib/audio'
 import { preloadCards, releasePreloaded, type PreloadedCard } from '@/lib/preload'
@@ -22,6 +23,7 @@ export function SharedMini({ token, set, game, voice, onBack }: {
   const [reveal, setReveal] = useState(() => revealSettings(set))
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
+  const [unavailable, setUnavailable] = useState<SharedError | null>(null)
   const [progress, setProgress] = useState({ done: 0, total: 0 })
   const [playing, setPlaying] = useState<{ set: MaterialSet; items: PreloadedCard[]; memory: MemoryDefaults; reveal: SlowRevealDefaults } | null>(null)
   const alive = useRef(true)
@@ -47,9 +49,13 @@ export function SharedMini({ token, set, game, voice, onBack }: {
       if (!alive.current) { releasePreloaded(result.items); return }
       if (result.failures.length) { releasePreloaded(result.items); throw new Error('画像や音声を よみこめませんでした。通信をたしかめて、もういちど。') }
       setPlaying({ set: latest.set, items: result.items, memory: m, reveal: r })
-    } catch (e) { if (alive.current) setError(e instanceof Error ? e.message : 'もういちど おためしください。') }
+    } catch (e) { if (alive.current) {
+      if (e instanceof SharedError && e.code === 'NOT_FOUND') setUnavailable(e)
+      else setError(e instanceof Error ? e.message : 'もういちど おためしください。')
+    } }
     finally { lock.current = false; if (alive.current) setBusy(false) }
   }
+  if (unavailable) return <StudentLoadError error={unavailable} onRetry={() => {}} />
   if (playing) return game === 'memory' ? <MemoryGame set={playing.set} items={playing.items} settings={playing.memory} voice={voice} onExit={onBack} />
     : <SlowRevealGame set={playing.set} items={playing.items} settings={playing.reveal} voice={voice} onExit={onBack} />
   return <main className="mx-auto flex max-w-lg flex-col gap-4 p-5">

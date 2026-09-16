@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import { useParams } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
 import { fetchSharedSet, sharedGameData, SharedError } from '@/api/shared'
+import { StudentLoadError } from '@/components/StudentLoadError'
 import { Button, Spinner } from '@/components/ui'
 import { FlashcardsGame } from '@/games/flashcards/FlashcardsGame'
 import { effectiveDisplay, type FlashcardsSettings } from '@/games/flashcards/settings'
@@ -26,6 +27,7 @@ function SharedSession({ token }: { token: string }) {
   const [busy, setBusy] = useState(false)
   const [mini, setMini] = useState<MiniGame | null>(null)
   const [error, setError] = useState('')
+  const [unavailable, setUnavailable] = useState<SharedError | null>(null)
   const [progress, setProgress] = useState({ done: 0, total: 0 })
   const [override, setOverride] = useState<Partial<FlashcardsSettings>>({})
   const [voice, setVoice] = useState<SpeechSynthesisVoice | null>(null)
@@ -66,6 +68,7 @@ function SharedSession({ token }: { token: string }) {
       }
       setPlaying({ set, settings, items: result.items })
     } catch (e) {
+      if (alive.current && e instanceof SharedError && e.code === 'NOT_FOUND') setUnavailable(e)
       if (alive.current) setError(e instanceof Error ? e.message : 'よみこめませんでした。もういちど。')
     } finally {
       starting.current = false
@@ -73,13 +76,10 @@ function SharedSession({ token }: { token: string }) {
     }
   }
 
+  if (unavailable) return <StudentLoadError error={unavailable} onRetry={() => {}} />
   if (playing) return <FlashcardsGame {...playing} voice={voice} onExit={() => { setPlaying(null); void query.refetch() }} />
   if (query.isPending) return <Spinner />
-  if (query.isError) return <main className="mx-auto flex max-w-lg flex-col gap-5 p-6 text-center">
-    <h1 className="text-2xl font-bold">このページは つかえません</h1>
-    <p role="alert">{query.error instanceof SharedError ? query.error.message : '通信を たしかめて、もういちど。'}</p>
-    <Button disabled={query.isFetching} onClick={() => void query.refetch()}>もういちど よみこむ</Button>
-  </main>
+  if (query.isError) return <StudentLoadError error={query.error} retrying={query.isFetching} onRetry={() => void query.refetch()} />
   const entry = query.data.set.gamesConfig.flashcards
   const publicData = sharedGameData(query.data)
   const availableMini = (['memory', 'slowreveal'] as const).filter(game => publicData.set.games_config[game]?.enabledForStudents &&
