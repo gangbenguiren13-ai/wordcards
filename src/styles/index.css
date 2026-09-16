@@ -68,3 +68,9 @@
   .pt-safe { padding-top: env(safe-area-inset-top); }
   .pb-safe { padding-bottom: env(safe-area-inset-bottom); }
 }
+
+/* 授業のタップ操作と生徒画面の共通方針（docs/design-policy.md）。 */
+.game-shell button, [data-audience="student"] button { min-height: 64px; min-width: 64px; }
+[data-audience="student"] button { font-size: 20px; }
+[data-audience="student"] [data-variant="primary"] { background: #f59e0b; border-color: #b45309; color: #16202e; }
+.game-shell .pb-safe { padding-bottom: max(16px, env(safe-area-inset-bottom)); }
