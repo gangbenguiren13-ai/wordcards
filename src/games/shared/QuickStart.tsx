@@ -10,9 +10,9 @@ export function rememberStarted(game: string) {
 }
 
 /** 教師画面だけの設定開閉。生徒側の公開設定とは独立させる。 */
-export function QuickStart({ game, count, summary, disabled, busy, onStart, children }: {
+export function QuickStart({ game, count, summary, disabled, busy, onStart, children, feedback }: {
   game: string; count: number; summary: string; disabled?: boolean; busy?: boolean
-  onStart: () => void; children: ReactNode
+  onStart: () => void; children: ReactNode; feedback?: ReactNode
 }) {
   const id = useId()
   const [previous] = useState(() => hasStarted(game))
@@ -33,6 +33,7 @@ export function QuickStart({ game, count, summary, disabled, busy, onStart, chil
       <Button variant="primary" size="xl" block disabled={disabled || busy} onClick={onStart}>
         {busy ? 'よみこみちゅう…' : `${previous ? '前回と同じ設定ではじめる' : 'はじめる'}（${count}枚）`}
       </Button>
+      {feedback}
       <p className="text-center text-base text-ink-soft" aria-label="設定の要約">{summary}</p>
     </section>
     <Button aria-expanded={open} aria-controls={id} disabled={busy} onClick={toggle}>

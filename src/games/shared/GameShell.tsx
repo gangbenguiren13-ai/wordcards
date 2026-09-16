@@ -1,3 +1,4 @@
+import { useToast } from '@/components/toast/useToast'
 import { useEffect, type ReactNode } from 'react'
 import { Button } from '@/components/ui'
 
@@ -9,6 +10,7 @@ import { Button } from '@/components/ui'
  */
 export function GameShell({
   title,
+  teacher = false,
   progress,
   showProgress,
   audioEnabled,
@@ -19,6 +21,7 @@ export function GameShell({
   footer,
 }: {
   title: string
+  teacher?: boolean
   progress?: { current: number; total: number }
   showProgress?: boolean
   audioEnabled?: boolean
@@ -28,6 +31,8 @@ export function GameShell({
   children: ReactNode
   footer?: ReactNode
 }) {
+  const { setGameRole } = useToast()
+  useEffect(() => { setGameRole?.(teacher ? 'teacher' : 'student'); return () => setGameRole?.(null) }, [teacher, setGameRole])
   // ゲームの途中で誤ってタブを閉じたりリロードしたりすると、
   // ★を付けた記録が消えてやり直しになる。念のため確認を挟む。
   useEffect(() => {

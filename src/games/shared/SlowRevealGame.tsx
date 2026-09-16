@@ -50,7 +50,7 @@ export function SlowRevealGame({ set, items, settings: s, voice, onExit, teacher
     if (answer) { stopPlayback(); setPosition(p => p + 1); setStep(0); setAnswer(false) }
     else setStep(old => Math.min(s.steps, old + 1))
   }
-  return <GameShell title="Slow Reveal" onExit={() => setExit(true)} progress={{ current: Math.min(position + 1, queue.length), total: queue.length }} showProgress
+  return <GameShell teacher={teacher} title="Slow Reveal" onExit={() => setExit(true)} progress={{ current: Math.min(position + 1, queue.length), total: queue.length }} showProgress
     audioEnabled={set.audio_enabled} audioOn={audioOn} onToggleAudio={() => { setAudioOn(!audioOn); stopPlayback() }}>
     {finished ? <section className="flex flex-1 flex-col items-center justify-center gap-5 p-6"><h2 className="text-3xl font-bold">おしまい！</h2><Button variant="primary" onClick={onExit}>ゲームえらびへ</Button></section> : <>
       <RevealStage imageUrl={item.imageUrl!} direction={s.direction} steps={s.steps} currentStep={answer ? s.steps : step} />

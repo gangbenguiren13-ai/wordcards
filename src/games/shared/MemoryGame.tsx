@@ -10,8 +10,8 @@ export interface MemoryTile { item: PreloadedCard; side: 0 | 1 }
 export function makeBoard(items: PreloadedCard[]): MemoryTile[] {
   return shuffled(items.flatMap(item => [{ item, side: 0 as const }, { item, side: 1 as const }]))
 }
-export function MemoryGame({ set, items, settings: s, voice, onExit }: {
-  set: MaterialSet; items: PreloadedCard[]; settings: MemoryDefaults; voice: SpeechSynthesisVoice | null; onExit: () => void
+export function MemoryGame({ set, items, settings: s, voice, onExit, teacher = false }: {
+  teacher?: boolean; set: MaterialSet; items: PreloadedCard[]; settings: MemoryDefaults; voice: SpeechSynthesisVoice | null; onExit: () => void
 }) {
   const [board] = useState(() => makeBoard(items))
   const [open, setOpen] = useState<number[]>([])
@@ -35,6 +35,12 @@ export function MemoryGame({ set, items, settings: s, voice, onExit }: {
     return () => clearInterval(clock)
   }, [ended])
   useEffect(() => () => { if (timer.current) clearTimeout(timer.current); playback.current++; stopPlayback() }, [])
+
+  useEffect(() => {
+    if (!audioError) return
+    const timer = setTimeout(() => setAudioError(''), 3000)
+    return () => clearTimeout(timer)
+  }, [audioError])
 
   function silence() { playback.current++; stopPlayback(); setAudioError('') }
   function play(item: PreloadedCard) {
@@ -72,7 +78,7 @@ export function MemoryGame({ set, items, settings: s, voice, onExit }: {
       if (!match && (s.timeLimitMinutes === null || Date.now() - started.current! < s.timeLimitMinutes * 60000)) setTeam(t => (t + 1) % s.teams)
     }, match ? 350 : 900)
   }
-  return <GameShell title="神経衰弱" onExit={() => { silence(); setExit(true) }} audioEnabled={set.audio_enabled} audioOn={audioOn}
+  return <GameShell teacher={teacher} title="神経衰弱" onExit={() => { silence(); setExit(true) }} audioEnabled={set.audio_enabled} audioOn={audioOn}
     onToggleAudio={() => { setAudioOn(!audioOn); silence() }}
     footer={ended && !showResults ? <div className="flex flex-wrap items-center justify-center gap-3 text-center">
       <h2 className="text-xl font-bold" role="status">{matched.length === items.length ? 'ぜんぶ そろった！' : 'じかんです！'}</h2>
@@ -83,7 +89,7 @@ export function MemoryGame({ set, items, settings: s, voice, onExit }: {
         {s.teams > 1 ? `チーム${i + 1}${i === team && !ended ? ' のばん' : ''}：` : 'そろったペア：'}{score}</p>)}
       <p className="p-2 tabular-nums">{s.timeLimitMinutes ? `のこり ${Math.max(0, s.timeLimitMinutes * 60 - elapsed)}` : elapsed}秒</p>
     </div>
-    {audioError && <p role="alert" className="p-2 text-center text-danger">{audioError}</p>}
+    {teacher && audioError && <p role="alert" className="p-2 text-center text-danger">{audioError}</p>}
     {showResults ? <section className="flex flex-1 flex-col items-center justify-center gap-5 p-6 text-center">
       <h2 className="text-3xl font-bold">結果</h2>
       <p>{matched.length} / {items.length}ペア・{elapsed}秒</p>
