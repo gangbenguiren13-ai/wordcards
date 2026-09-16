@@ -56,6 +56,7 @@ export function SharePage() {
   return <>{header}<main className="mx-auto flex max-w-xl flex-col gap-4 p-4 pb-12">
     <h1 className="text-xl font-bold">{set.title}</h1>
     <p>生徒はログインせずに、QRコードかリンクから、先生が許可したゲームを使えます。</p>
+    <p>共有をオフにすると、生徒には「このQRコードは つかえません。先生に みせてください。」と表示されます。</p>
     {notice && <p role="status" className="font-bold">{notice}</p>}
     {action.isError && <p role="alert" className="font-bold text-danger-700">{toJapaneseError(action.error)}</p>}
     {blocked && <p role="alert">共有前に、教材の未入力・ゲームの公開設定を確認してください。</p>}

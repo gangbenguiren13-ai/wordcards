@@ -33,6 +33,22 @@ beforeEach(() => {
 afterEach(cleanup)
 
 describe('匿名の共有ページ', () => {
+  it('無効URL・共有停止の404には再読込も教師リンクも出さない', async () => {
+    vi.mocked(fetchSharedSet).mockRejectedValue(new SharedError(404))
+    mount()
+    expect((await screen.findByRole('alert')).textContent).toContain('先生に みせてください')
+    expect(screen.queryAllByRole('button')).toHaveLength(0)
+    expect(screen.queryAllByRole('link')).toHaveLength(0)
+  })
+  it('通信失敗は再読み込みでき、混雑は通信と区別する', async () => {
+    expect(new SharedError(404).code).toBe('NOT_FOUND')
+    expect(new SharedError(503).code).toBe('NETWORK')
+    expect(new SharedError(429).code).toBe('BUSY')
+    vi.mocked(fetchSharedSet).mockRejectedValue(new SharedError(503))
+    mount()
+    await screen.findByRole('button', { name: 'もういちど よみこむ' })
+    expect((await screen.findByRole('alert')).textContent).toContain('通信を')
+  })
   it('神経衰弱でも開始直前に最新の公開設定を確認する', async () => {
     const p = payload()
     p.cards = Array.from({ length: 6 }, (_, i) => ({ ...p.cards[0], id: String(i), word: `word${i}`, imageUrl: `https://example.invalid/${i}` }))
@@ -55,7 +71,8 @@ describe('匿名の共有ページ', () => {
   it('開始前に共有が停止された場合はゲームを開始しない', async () => {
     vi.mocked(fetchSharedSet).mockResolvedValueOnce(payload()).mockRejectedValueOnce(new SharedError(404))
     mount(); fireEvent.click(await screen.findByRole('button', { name: '▶ はじめる' }))
-    expect((await screen.findByRole('alert')).textContent).toContain('このページは つかえません')
+    expect((await screen.findByRole('alert')).textContent).toContain('このQRコードは つかえません')
+    expect(screen.queryAllByRole('button')).toHaveLength(0)
     expect(preloadCards).not.toHaveBeenCalled()
   })
   it('教師が非公開にしたゲームは開始ボタンを出さない', async () => {
