@@ -1,3 +1,6 @@
+import { LoadingProgress } from '@/components/LoadingProgress'
+import { ActionError } from '@/components/ActionError'
+import { useToast } from '@/components/toast/useToast'
 import { useEffect, useRef, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { useQueryClient } from '@tanstack/react-query'
@@ -12,6 +15,8 @@ import { useLeaveWarning } from './BulkImport'
 
 export function SetTransferPage() {
   const { id } = useParams()
+  const toast = useToast()
+  const [retry, setRetry] = useState<(() => void) | undefined>(undefined)
   const { user } = useAuth()
   const qc = useQueryClient()
   const [preview, setPreview] = useState<ArchivePreview | null>(null)
@@ -20,11 +25,13 @@ export function SetTransferPage() {
   const [busy, setBusy] = useState(false)
   const [complete, setComplete] = useState(false)
   const [note, setNote] = useState('')
-  const [error, setError] = useState('')
+  const [error, setErrorState] = useState('')
+  function setError(message: string) { setErrorState(message); if (message) toast.show(message) }
   const [job, setJob] = useState<ImportJob | null>(null)
   useLeaveWarning(!!job && !complete)
   async function prepareExport(media: boolean) {
     if (!id || busy) return
+    setRetry(() => () => void prepareExport(media))
     setBusy(true); setError(''); setArtifact(null); setNote('教材を読み込んでいます…')
     try { setArtifact(await exportSet(id, media, setNote)); setNote('ファイルを用意しました。下の「ファイルを保存」を押してください。') }
     catch (e) { setNote(''); setError(`書き出しを完了できませんでした。${(e as Error).message} 通信を確認して再試行してください。`) }
@@ -32,6 +39,7 @@ export function SetTransferPage() {
   }
   async function load(file?: File) {
     if (!file || busy || job) return
+    setRetry(() => () => void load(file))
     setBusy(true); setError(''); setPreview(null); setWithoutMedia(false); setNote('ファイルを確認しています…')
     try { const result = await readArchiveFile(file); setPreview(result); setNote('内容を確認して「新しい教材として読み込む」を押してください。') }
     catch (e) { setNote(''); setError((e as Error).message) }
@@ -39,18 +47,21 @@ export function SetTransferPage() {
   }
   async function restore() {
     if (!preview || !user || busy) return
+    setRetry(() => () => void restore())
     setBusy(true); setError('')
     try {
       const activeJob = job ?? importJob(user.id, crypto.randomUUID(), preview.rows, preview)
       setJob(activeJob)
       await runImport(activeJob, setNote)
-      await qc.invalidateQueries({ queryKey: ['sets'] }); setComplete(true)
+      await qc.invalidateQueries({ queryKey: ['sets'] }); setComplete(true); toast.show('保存しました', 'success')
     } catch (e) { setError(`読み込みが止まりました。${(e as Error).message} 完了した分は保存されています。この画面の「続きから再試行」で再開してください。`) }
     finally { setBusy(false) }
   }
   return <>
     <AppHeader title={id ? '教材を書き出す' : '教材ファイルを読み込む'} back={busy || job ? undefined : id ? `/t/sets/${id}/edit` : '/t/home'} />
     <main className="mx-auto flex max-w-3xl flex-col gap-5 p-4 pb-20">
+      {busy && <LoadingProgress label={note.replace(/\d+\s*\/\s*\d+枚/, '').replace(/^：/, '') || '教材ファイルを よみこみちゅう'}
+        done={Number(note.match(/(\d+)\s*\/\s*(\d+)枚/)?.[1] ?? 0)} total={note.match(/(\d+)\s*\/\s*(\d+)枚/) ? Number(note.match(/(\d+)\s*\/\s*(\d+)枚/)?.[2]) : undefined} />}
       <h1 className="text-2xl font-bold">{id ? '教材のバックアップ' : 'JSON・ZIPから教材を復元'}</h1>
       {id ? <section className="flex flex-col gap-4 rounded-2xl border-2 border-line bg-surface p-5">
         <p><strong>ZIP</strong>は単語・設定・画像・関連画像・音声をまとめて保存します。別のPCでの復元にも使えます（100MBまで）。</p>
@@ -69,8 +80,8 @@ export function SetTransferPage() {
           {!complete && <Button variant="primary" size="lg" disabled={busy || (!!preview.missing.length && !withoutMedia)} onClick={() => void restore()}>{busy ? '読み込み中…' : job ? '続きから再試行' : '新しい教材として読み込む'}</Button>}
         </section>}
       </>}
-      {note && <p role="status" className="rounded-xl bg-brand-50 p-4 font-bold">{note}</p>}
-      {error && <p role="alert" className="rounded-xl bg-danger-50 p-4 text-danger-700">{error}</p>}
+      {!busy && note && <p role="status" className="rounded-xl bg-brand-50 p-4 font-bold">{note}</p>}
+      <ActionError error={error} onRetry={retry} onDismiss={() => setError('')} busy={busy} />
       {artifact && <DownloadLink artifact={artifact} />}
       {complete && job && <Link className="flex min-h-14 items-center justify-center rounded-xl bg-brand-600 p-4 font-bold text-white" to={`/t/sets/${job.setId}/edit`}>読み込んだ教材を開く</Link>}
       {!!job && !busy && !complete && <Link className="p-3 underline" to={`/t/sets/${job.setId}/edit`}>途中まで読み込んだ教材を確認する（再試行はこの画面で）</Link>}

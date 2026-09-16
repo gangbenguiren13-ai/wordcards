@@ -1,3 +1,4 @@
+import { MutationError } from '@/components/ActionError'
 import { matchesTitle, recentSets } from '@/lib/recentSets'
 import { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
@@ -171,6 +172,7 @@ export function HomePage() {
                   </div>
                   {openMenu === set.id && <div aria-label={`${set.title}のその他の操作`} className="flex flex-col gap-3 rounded-xl border-2 border-line p-3" onKeyDown={e => { if (e.key === 'Escape') setOpenMenu(null) }}>
                     <Button disabled={duplicate.isPending} onClick={() => duplicate.mutate(set.id)}>教材を複製</Button>
+                    {duplicate.variables === set.id && <MutationError mutation={duplicate} />}
                     <Link to={`/t/sets/${set.id}/export`} className="inline-flex min-h-11 items-center justify-center rounded-xl border-2 border-line px-4 font-bold">教材を書き出す</Link>
                     <Button variant="danger" onClick={() => { setOpenMenu(null); setDeleteTarget(set) }}>ゴミ箱に入れる</Button>
                   </div>}
@@ -185,6 +187,7 @@ export function HomePage() {
                   >
                     もとに戻す
                   </Button>
+                  {restore.variables === set.id && <MutationError mutation={restore} />}
                 </div>
               )}
             </li>
@@ -194,6 +197,7 @@ export function HomePage() {
 
       {/* 新規作成 */}
       <Dialog
+        feedback={<MutationError mutation={create} />}
         open={creating}
         title="新しい教材セット"
         confirmLabel="作る"
@@ -234,16 +238,12 @@ export function HomePage() {
               ))}
             </div>
           </fieldset>
-          {create.isError && (
-            <p className="text-sm font-bold text-danger-700">
-              ⚠ 作成できませんでした。通信を確認してください。
-            </p>
-          )}
         </div>
       </Dialog>
 
       {/* 削除確認 */}
       <Dialog
+        feedback={<MutationError mutation={remove} />}
         open={Boolean(deleteTarget)}
         title="ゴミ箱に入れますか？"
         confirmLabel="ゴミ箱に入れる"

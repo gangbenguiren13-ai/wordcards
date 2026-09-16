@@ -1,3 +1,6 @@
+import { ActionError, MutationError } from '@/components/ActionError'
+import { useActionFeedback } from '@/components/useActionFeedback'
+import { useToast } from '@/components/toast/useToast'
 import { useMemo, useState } from 'react'
 import { useParams } from 'react-router-dom'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
@@ -8,7 +11,6 @@ import { LoadError } from '@/components/LoadError'
 import { Button, Dialog, Spinner } from '@/components/ui'
 import { hasBlockingError, validateSet } from '@/lib/validation'
 import { canShareGame } from '@/games/shared/miniGames'
-import { toJapaneseError } from '@/lib/errorMessage'
 
 export function ShareQr({ url }: { url: string }) {
   const qr = useMemo(() => QRCode.create(url, { errorCorrectionLevel: 'M' }).modules, [url])
@@ -23,6 +25,8 @@ export function ShareQr({ url }: { url: string }) {
 export function SharePage() {
   const { id = '' } = useParams()
   const qc = useQueryClient()
+  const feedback = useActionFeedback()
+  const toast = useToast()
   const [confirmRotate, setConfirmRotate] = useState(false)
   const [notice, setNotice] = useState('')
   const setQuery = useQuery({ queryKey: ['set', id], queryFn: () => getSet(id) })
@@ -41,7 +45,7 @@ export function SharePage() {
     },
     onSuccess: async (_, kind) => {
       setConfirmRotate(false)
-      setNotice(kind === 'stop' ? '共有を停止しました。' : kind === 'rotate' ? '新しいURLに変わりました。配り直してください。' : '共有を開始しました。')
+      setNotice(kind === 'rotate' ? '新しいURLに変わりました。配り直してください。' : '')
       await Promise.all([qc.invalidateQueries({ queryKey: ['set', id] }), qc.invalidateQueries({ queryKey: ['sets'] })])
     },
   })
@@ -58,7 +62,6 @@ export function SharePage() {
     <p>生徒はログインせずに、QRコードかリンクから、先生が許可したゲームを使えます。</p>
     <p>共有をオフにすると、生徒には「このQRコードは つかえません。先生に みせてください。」と表示されます。</p>
     {notice && <p role="status" className="font-bold">{notice}</p>}
-    {action.isError && <p role="alert" className="font-bold text-danger-700">{toJapaneseError(action.error)}</p>}
     {blocked && <p role="alert">共有前に、教材の未入力・ゲームの公開設定を確認してください。</p>}
     <p className="text-lg font-bold">{set.share_enabled ? '共有中' : '共有停止中'}</p>
     {set.share_enabled && url && <>
@@ -68,18 +71,20 @@ export function SharePage() {
           className="w-full rounded-xl border-2 border-line p-3 text-sm" />
       </label>
       <Button onClick={async () => {
-        try { await navigator.clipboard.writeText(url); setNotice('リンクをコピーしました。ロイロノートなどに貼り付けてください。') }
-        catch { setNotice('自動コピーできませんでした。リンク欄を選んでコピーしてください。') }
+        try { await navigator.clipboard.writeText(url); toast.show('リンクをコピーしました。ロイロノートなどに貼り付けてください。', 'info'); feedback.clear('copy') }
+        catch { feedback.fail('copy', '自動コピーできませんでした。リンク欄を選んでコピーしてください。') }
       }}>リンクをコピー</Button>
+      <ActionError error={feedback.errors.copy?.message} onDismiss={() => feedback.clear('copy')} />
       <a href={url} target="_blank" rel="noopener noreferrer" className="text-center font-bold underline">生徒用ページを確認する</a>
     </>}
     <Button variant="primary" disabled={action.isPending || (!set.share_enabled && blocked)}
       onClick={() => action.mutate(set.share_enabled ? 'stop' : 'enable')}>
       {action.isPending ? '処理中…' : set.share_enabled ? '共有を停止する' : set.share_token ? '同じリンクで共有を再開する' : '共有リンク・QRコードを作る'}
     </Button>
+    {!confirmRotate && <MutationError mutation={action} />}
     {set.share_token && <Button disabled={action.isPending || blocked} onClick={() => setConfirmRotate(true)}>URLを作り直す</Button>}
     <p className="text-sm text-ink-soft">リンクは授業で使う相手にだけ配ってください。停止・作り直し後は古いリンクから新しく開けなくなります。すでに開いて読み込んだ教材は、その端末では続けて使える場合があります。</p>
-  </main><Dialog open={confirmRotate} title="URLを作り直しますか？" confirmLabel="作り直して共有する"
+  </main><Dialog feedback={<MutationError mutation={action} />} open={confirmRotate} title="URLを作り直しますか？" confirmLabel="作り直して共有する"
     busy={action.isPending} onCancel={() => setConfirmRotate(false)} onConfirm={() => action.mutate('rotate')}>
     前のURL・QRコードは使えなくなります。新しいリンクを生徒に配り直してください。
   </Dialog></>

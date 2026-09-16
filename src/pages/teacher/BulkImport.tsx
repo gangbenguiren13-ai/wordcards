@@ -1,3 +1,6 @@
+import { LoadingProgress } from '@/components/LoadingProgress'
+import { ActionError } from '@/components/ActionError'
+import { useToast } from '@/components/toast/useToast'
 import { useEffect, useRef, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
@@ -43,6 +46,8 @@ export function BulkImportPage() {
   return <BulkEditor key={id} setId={id} title={set.data.title} initialCards={cards.data} />
 }
 export function BulkEditor({ setId, title, initialCards }: { setId: string; title: string; initialCards: Card[] }) {
+  const toast = useToast()
+  const [retry, setRetry] = useState<(() => void) | undefined>(undefined)
   const { user } = useAuth()
   const qc = useQueryClient()
   const [tab, setTab] = useState<'table' | 'csv' | 'files'>('table')
@@ -50,7 +55,8 @@ export function BulkEditor({ setId, title, initialCards }: { setId: string; titl
   const [pending, setPending] = useState<PendingFile[]>([])
   const [paste, setPaste] = useState('')
   const [note, setNote] = useState('')
-  const [error, setError] = useState('')
+  const [error, setErrorState] = useState('')
+  function setError(message: string) { setErrorState(message); if (message) toast.show(message) }
   const [busy, setBusy] = useState(false)
   const [complete, setComplete] = useState(false)
   const [job, setJob] = useState<ImportJob | null>(null)
@@ -68,6 +74,7 @@ export function BulkEditor({ setId, title, initialCards }: { setId: string; titl
   }
   async function readTable(file?: File) {
     if (!file || locked) return
+    setRetry(() => () => void readTable(file))
     setError(''); setBusy(true)
     try {
       if (file.size > MAX_JSON_BYTES) throw new Error('CSV/TSVは2MBまでです。')
@@ -96,6 +103,7 @@ export function BulkEditor({ setId, title, initialCards }: { setId: string; titl
   }
   async function save() {
     if (!user || busy) return
+    setRetry(() => () => void save())
     setBusy(true); setError('')
     try {
       let activeJob = job
@@ -108,13 +116,15 @@ export function BulkEditor({ setId, title, initialCards }: { setId: string; titl
       setJob(activeJob)
       await runImport(activeJob, setNote)
       await Promise.all([qc.invalidateQueries({ queryKey: ['cards', setId] }), qc.invalidateQueries({ queryKey: ['sets'] }), qc.invalidateQueries({ queryKey: ['signed-urls'] })])
-      setComplete(true)
+      setComplete(true); toast.show('保存しました', 'success')
     } catch (e) { setError(`登録が止まりました。${(e as Error).message} 完了した分は保存されています。「続きから再試行」で再開できます。`) }
     finally { setBusy(false) }
   }
   return <>
     <AppHeader title={`${title}：一括登録`} back={dirty || busy ? undefined : `/t/sets/${setId}/edit`} />
     <main className="mx-auto flex max-w-6xl flex-col gap-5 p-4 pb-24">
+      {busy && <LoadingProgress label={note.replace(/\d+\s*\/\s*\d+枚/, '').replace(/^：/, '') || '教材ファイルを よみこみちゅう'}
+        done={Number(note.match(/(\d+)\s*\/\s*(\d+)枚/)?.[1] ?? 0)} total={note.match(/(\d+)\s*\/\s*(\d+)枚/) ? Number(note.match(/(\d+)\s*\/\s*(\d+)枚/)?.[2]) : undefined} />}
       <h1 className="text-2xl font-bold">カードをまとめて登録</h1>
       <p>単語やファイルを追加し、下の一覧で確認してから「登録」を押してください。既存のカードには、画像・音声を対応づけられます。</p>
       <fieldset disabled={locked} className="contents">
@@ -159,13 +169,14 @@ export function BulkEditor({ setId, title, initialCards }: { setId: string; titl
           </table></div>
         </section>
       </fieldset>
-      {note && <p role="status" className="rounded-xl bg-brand-50 p-4 font-bold">{note}</p>}
-      {error && <p role="alert" className="rounded-xl bg-danger-50 p-4 text-danger-700">{error}</p>}
+      {!busy && note && <p role="status" className="rounded-xl bg-brand-50 p-4 font-bold">{note}</p>}
+      {!job && <ActionError error={error} onRetry={retry} onDismiss={() => setError('')} busy={busy} />}
       {!complete && <div className="rounded-xl border-2 border-line bg-surface p-4">
         <p className="mb-3">登録対象：{selected.length}枚{replacements > 0 ? `（既存ファイル${replacements}個を変更）` : ''}。未対応{pending.length}個は登録しません。</p>
         {errors.length > 0 && <p className="mb-2 font-bold text-danger-700">{errors.length}行にエラーがあります。修正するかチェックを外してください。</p>}
         {selected.filter(r => !r.existing).length + initialCards.length > 120 && <p className="mb-2 text-warn-700">120枚を超えると読み込みに時間がかかることがあります。</p>}
         <Button variant="primary" size="lg" disabled={busy || (!job && (!selected.length || !!errors.length))} onClick={() => void save()}>{busy ? '登録中…' : job ? '続きから再試行' : '確認した内容を登録'}</Button>
+        {job && <ActionError error={error} onRetry={() => void save()} onDismiss={() => setError('')} busy={busy} />}
       </div>}
       {(!busy && (complete || !dirty)) && <Link className="min-h-11 p-3 font-bold underline" to={`/t/sets/${setId}/edit`}>編集画面へ戻る</Link>}
       {job && !busy && !complete && <Link className="min-h-11 p-3 underline" to={`/t/sets/${setId}/edit`}>登録済みの分を編集画面で確認する（未完了分の再開はこの画面で）</Link>}
