@@ -21,6 +21,7 @@ const ADVANCE_DEBOUNCE_MS = 250
 const SWIPE_THRESHOLD_PX = 60
 
 interface Props {
+  teacher?: boolean
   set: MaterialSet
   items: PreloadedCard[]
   settings: FlashcardsSettings
@@ -28,7 +29,7 @@ interface Props {
   onExit: () => void
 }
 
-export function FlashcardsGame({ set, items, settings, voice, onExit }: Props) {
+export function FlashcardsGame({ set, items, settings, voice, onExit, teacher = false }: Props) {
   const display = effectiveDisplay(set, settings)
   const twoSided = isTwoSided(display)
   const cardIds = useMemo(() => items.map((i) => i.card.id), [items])
@@ -219,7 +220,7 @@ export function FlashcardsGame({ set, items, settings, voice, onExit }: Props) {
       .filter((c): c is NonNullable<typeof c> => Boolean(c))
     const stillHas = hasRemainingReview(states)
     return (
-      <GameShell title={set.title} onExit={onExit}>
+      <GameShell teacher={teacher} title={set.title} onExit={onExit}>
         <EndScreen
           title={stillHas ? 'おつかれさま！' : 'ぜんぶ できました！'}
           message={stillHas ? undefined : '★のカードはもうありません。'}
@@ -236,7 +237,7 @@ export function FlashcardsGame({ set, items, settings, voice, onExit }: Props) {
 
   if (!current) {
     return (
-      <GameShell title={set.title} onExit={onExit}>
+      <GameShell teacher={teacher} title={set.title} onExit={onExit}>
         <p className="m-auto text-center font-bold text-ink-soft">
           このセットには表示できるカードがありません。
         </p>
@@ -268,7 +269,7 @@ export function FlashcardsGame({ set, items, settings, voice, onExit }: Props) {
   }
 
   return (
-    <GameShell
+    <GameShell teacher={teacher}
       title={set.title}
       progress={{ current: position + 1, total: queue.length }}
       showProgress={settings.showProgress}
