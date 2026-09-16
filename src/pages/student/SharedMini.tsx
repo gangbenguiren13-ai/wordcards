@@ -1,3 +1,4 @@
+import { LoadingProgress } from '@/components/LoadingProgress'
 import { useEffect, useRef, useState } from 'react'
 import { fetchSharedSet, sharedGameData, SharedError } from '@/api/shared'
 import { StudentLoadError } from '@/components/StudentLoadError'
@@ -65,6 +66,6 @@ export function SharedMini({ token, set, game, voice, onBack }: {
       : <RevealSettingsPanel value={reveal} onChange={setReveal} mode={set.mode} adjustable={set.games_config.slowreveal?.studentAdjustable ?? []} />}</fieldset>
     {error && <p role="alert" className="font-bold text-danger-700">{error}</p>}
     <Button variant="primary" size="xl" block disabled={busy} onClick={() => void start()}>{busy ? 'よみこみちゅう…' : '▶ はじめる'}</Button>
-    {busy && <div role="status"><progress className="w-full" value={progress.done} max={progress.total || 1} /><p>{progress.done} / {progress.total}</p></div>}
+    {busy && <LoadingProgress {...progress} label="カードの画像と音声を よみこみちゅう" />}
   </main>
 }
