@@ -1,3 +1,4 @@
+import { rememberUsed } from '@/lib/recentSets'
 import { QuickStart, rememberStarted } from '@/games/shared/QuickStart'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
@@ -132,6 +133,7 @@ function FlashcardsPlayPage() {
       setItems(result.items)
       rememberSettings(settings)
       rememberStarted('flashcards')
+      rememberUsed(set.owner_id, set.id)
       setStage('playing')
     } catch (e) {
       toast.show(toJapaneseError(e))

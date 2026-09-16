@@ -1,3 +1,4 @@
+import { matchesTitle, recentSets } from '@/lib/recentSets'
 import { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
@@ -18,6 +19,8 @@ import { SETS_WARN_LIMIT, TRASH_RETENTION_DAYS } from '@/lib/constants'
 export function HomePage() {
   const qc = useQueryClient()
   const navigate = useNavigate()
+  const [search, setSearch] = useState('')
+  const [openMenu, setOpenMenu] = useState<string | null>(null)
   const [tab, setTab] = useState<'active' | 'trash'>('active')
   const [creating, setCreating] = useState(false)
   const [newTitle, setNewTitle] = useState('')
@@ -65,11 +68,15 @@ export function HomePage() {
   })
 
   const list = tab === 'active' ? sets : trash
+  const filtered = list.data?.filter(set => matchesTitle(set.title, search)) ?? []
+  const recent = recentSets(sets.data ?? []).filter(set => matchesTitle(set.title, search))
 
   return (
     <>
       <AppHeader />
       <main className="mx-auto max-w-5xl p-4">
+        <div className="mb-5"><TextField label="セット名でさがす" type="search" placeholder="例：Nature、どうぶつ"
+          value={search} onChange={e => setSearch(e.target.value)} /></div>
         <div className="mb-4 flex flex-wrap items-center gap-3">
           <div className="flex gap-2">
             <TabButton active={tab === 'active'} onClick={() => setTab('active')}>
@@ -81,7 +88,7 @@ export function HomePage() {
           </div>
           {tab === 'active' && (
             <Button
-              variant="primary"
+              variant="secondary"
               size="lg"
               className="ml-auto"
               icon="＋"
@@ -120,8 +127,20 @@ export function HomePage() {
           </p>
         )}
 
-        <ul className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-          {list.data?.map((set) => (
+        {tab === 'active' && recent.length > 0 && <section aria-label="最近つかった" className="mb-6">
+          <h2 className="mb-3 text-xl font-bold">最近つかった</h2>
+          <ul className="grid gap-3 sm:grid-cols-3">{recent.map(set => <li key={set.id} className="rounded-2xl border-2 border-brand-100 bg-brand-50 p-4">
+            <h3 className="break-words text-lg font-bold">{set.title}</h3><p className="my-2">{set.card_count}枚・{SET_MODE_LABELS[set.mode]}</p>
+            <Link to={`/t/sets/${set.id}/play`} className="inline-flex min-h-14 w-full items-center justify-center rounded-xl border-2 border-brand-600 bg-brand-600 px-4 text-lg font-bold text-white">▶ あそぶ</Link>
+          </li>)}</ul>
+        </section>}
+        {list.data && <h2 className="mb-3 text-xl font-bold">{tab === 'active' ? 'すべての教材' : 'ゴミ箱'}（{list.data.length}）{search && `・検索結果 ${filtered.length}件`}</h2>}
+        {list.data && list.data.length > 0 && filtered.length === 0 && <section className="rounded-2xl border-2 border-dashed border-line p-8 text-center">
+          <p aria-hidden="true" className="text-4xl">🔎</p><p className="my-4">見つかりません。検索を変えるか、新しい教材セットを作れます。</p>
+          <div className="flex justify-center gap-3"><Button onClick={() => setSearch('')}>検索をクリアする</Button>{tab === 'active' && <Button onClick={() => setCreating(true)}>新しい教材セットを作る</Button>}</div>
+        </section>}
+        <ul aria-label={tab === 'active' ? '教材セット一覧' : 'ゴミ箱の教材一覧'} className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+          {filtered.map((set) => (
             <li key={set.id} className="rounded-2xl border-2 border-line bg-surface p-4">
               <div className="flex items-start gap-2">
                 <h2 className="min-w-0 flex-1 break-words text-lg font-bold">{set.title}</h2>
@@ -142,24 +161,19 @@ export function HomePage() {
               </p>
 
               {tab === 'active' ? (
-                <div className="mt-3 flex flex-wrap gap-2">
-                  <Link
-                    to={`/t/sets/${set.id}/edit`}
-                    className="inline-flex min-h-11 flex-1 items-center justify-center rounded-xl border-2 border-brand-600 bg-brand-600 px-4 font-bold text-white"
-                  >
-                    ひらく
-                  </Link>
-                  <Button
-                    onClick={() => duplicate.mutate(set.id)}
-                    disabled={duplicate.isPending}
-                    title="複製"
-                  >
-                    複製
-                  </Button>
-                  <Button variant="danger" onClick={() => setDeleteTarget(set)}>
-                    削除
-                  </Button>
-                  <Link to={`/t/sets/${set.id}/export`} className="inline-flex min-h-11 items-center rounded-xl border-2 border-line px-4 font-bold">書き出し</Link>
+                <div className="mt-3 flex flex-col gap-3">
+                  <Link to={`/t/sets/${set.id}/play`} className="inline-flex min-h-14 items-center justify-center rounded-xl border-2 border-brand-600 bg-brand-600 px-4 text-lg font-bold text-white">▶ あそぶ</Link>
+                  <div className="flex flex-wrap gap-3">
+                    <Link to={`/t/sets/${set.id}/edit`} className="inline-flex min-h-11 items-center rounded-xl border-2 border-line px-4 font-bold">教材を編集</Link>
+                    <Link to={`/t/sets/${set.id}/share`} className="inline-flex min-h-11 items-center rounded-xl border-2 border-line px-4 font-bold">共有する</Link>
+                    <Button aria-label={`${set.title}のその他の操作`} aria-expanded={openMenu === set.id}
+                      onClick={() => setOpenMenu(openMenu === set.id ? null : set.id)}>…</Button>
+                  </div>
+                  {openMenu === set.id && <div aria-label={`${set.title}のその他の操作`} className="flex flex-col gap-3 rounded-xl border-2 border-line p-3" onKeyDown={e => { if (e.key === 'Escape') setOpenMenu(null) }}>
+                    <Button disabled={duplicate.isPending} onClick={() => duplicate.mutate(set.id)}>教材を複製</Button>
+                    <Link to={`/t/sets/${set.id}/export`} className="inline-flex min-h-11 items-center justify-center rounded-xl border-2 border-line px-4 font-bold">教材を書き出す</Link>
+                    <Button variant="danger" onClick={() => { setOpenMenu(null); setDeleteTarget(set) }}>ゴミ箱に入れる</Button>
+                  </div>}
                 </div>
               ) : (
                 <div className="mt-3 flex gap-2">
