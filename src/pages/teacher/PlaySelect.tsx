@@ -53,7 +53,7 @@ export function PlaySelectPage() {
   if (setQuery.isError || cardsQuery.isError) {
     return (
       <>
-        <AppHeader back={`/t/sets/${id}/edit`} />
+        <AppHeader back="/t/home" />
         <LoadError
           retrying={setQuery.isFetching || cardsQuery.isFetching}
           onRetry={() => { void setQuery.refetch(); void cardsQuery.refetch() }}
@@ -92,7 +92,7 @@ export function PlaySelectPage() {
 
   return (
     <>
-      <AppHeader title={set.title} back={`/t/sets/${id}/edit`} />
+      <AppHeader title={set.title} back="/t/home" />
       <main className="mx-auto flex max-w-3xl flex-col gap-4 p-4">
         {empty && (
           <p className="rounded-xl border-2 border-warn-500 bg-warn-50 p-4 font-bold text-warn-700">

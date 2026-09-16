@@ -1,3 +1,4 @@
+import { rememberUsed } from '@/lib/recentSets'
 import { lastMemorySettings, lastRevealSettings, rememberMiniSettings } from '@/games/shared/lastMiniSettings'
 import { QuickStart, rememberStarted } from '@/games/shared/QuickStart'
 import { useEffect, useRef, useState } from 'react'
@@ -58,6 +59,7 @@ function MiniSetup({ set, cards, game }: { set: MaterialSet; cards: Card[]; game
       if (result.failures.length) { releasePreloaded(result.items); throw new Error('画像や音声を読み込めませんでした。通信を確認して、もう一度お試しください。') }
       rememberMiniSettings(set, game, game === 'memory' ? memory : reveal)
       rememberStarted(`${game}:${set.id}`)
+      rememberUsed(set.owner_id, set.id)
       setPlaying({ items: result.items, memory, reveal })
     } catch (e) { if (alive.current) setError(toJapaneseError(e)) }
     finally { lock.current = false; if (alive.current) setBusy(false) }
