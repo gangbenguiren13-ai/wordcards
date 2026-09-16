@@ -54,7 +54,7 @@ describe('匿名の共有ページ', () => {
     p.cards = Array.from({ length: 6 }, (_, i) => ({ ...p.cards[0], id: String(i), word: `word${i}`, imageUrl: `https://example.invalid/${i}` }))
     const stopped = structuredClone(p); stopped.set.gamesConfig.memory!.enabledForStudents = false
     vi.mocked(fetchSharedSet).mockResolvedValueOnce(p).mockResolvedValueOnce(stopped)
-    mount(); fireEvent.click(await screen.findByRole('button', { name: '神経衰弱' }))
+    mount(); fireEvent.click(await screen.findByRole('button', { name: 'しんけいすいじゃくで あそぶ' }))
     expect(screen.queryByText('ペアの種類')).toBeNull()
     fireEvent.click(screen.getByRole('button', { name: '▶ はじめる' }))
     expect((await screen.findByRole('alert')).textContent).toContain('おやすみちゅう')
