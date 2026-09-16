@@ -1,65 +1,54 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
+import { useLocation } from 'react-router-dom'
 import { ToastContext, type ToastItem, type ToastKind } from './ToastContext'
 
-const STYLES: Record<ToastKind, string> = {
-  error: 'border-danger-500 bg-danger-50 text-danger-700',
-  success: 'border-ok-500 bg-ok-50 text-ok-700',
-  info: 'border-brand-500 bg-brand-50 text-brand-700',
-}
-const ICONS: Record<ToastKind, string> = { error: '⚠', success: '✓', info: 'ℹ' }
-
-/**
- * 画面の下に短く出る通知。
- *
- * 「押しても何も起こらない」が一番デバッグしづらい状態なので、
- * サーバー操作の失敗は個別に書くのではなく、必ずここを通して表示する。
- * 成功の合図（保存しました）も同じ経路にして、教師が状態を見失わないようにする。
- */
-export function ToastProvider({
-  children,
-  onReady,
-}: {
-  children: ReactNode
-  /** 画面の外（TanStack Query の共通エラー処理）から呼べるように show を渡す */
-  onReady?: (show: (message: string, kind?: ToastKind) => void) => void
+/** 全ミューテーションの失敗を受け止める共通経路。個別の操作直下にも ActionError を置く。 */
+export function ToastProvider({ children, onReady }: {
+  children: ReactNode; onReady?: (show: (message: string, kind?: ToastKind) => void) => void
 }) {
+  const { pathname } = useLocation()
+  const student = pathname.startsWith('/p/')
   const [items, setItems] = useState<ToastItem[]>([])
+  const [saved, setSaved] = useState(false)
+  const [gameRole, setGameRole] = useState<'teacher' | 'student' | null>(null)
   const nextId = useRef(1)
-
-  const show = useCallback((message: string, kind: ToastKind = 'error') => {
-    const id = nextId.current++
-    setItems((prev) => [...prev.slice(-2), { id, kind, message }])
-    const ms = kind === 'error' ? 6000 : 2500
-    setTimeout(() => setItems((prev) => prev.filter((t) => t.id !== id)), ms)
-  }, [])
-
-  const api = useMemo(() => ({ show }), [show])
-
+  const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const timers = useRef(new Set<ReturnType<typeof setTimeout>>())
+  const audience = useRef({ student, gameRole })
+  useEffect(() => { audience.current = { student, gameRole } }, [student, gameRole])
   useEffect(() => {
-    onReady?.(show)
-  }, [onReady, show])
-
-  return (
-    <ToastContext.Provider value={api}>
-      {children}
-      <div
-        className="pointer-events-none fixed inset-x-0 bottom-0 z-[60] flex flex-col items-center gap-2 p-4 pb-safe"
-        role="status"
-        aria-live="polite"
-      >
-        {items.map((t) => (
-          <div
-            key={t.id}
-            className={[
-              'pointer-events-auto w-full max-w-md rounded-xl border-2 px-4 py-3',
-              'text-center text-sm font-bold shadow-lg',
-              STYLES[t.kind],
-            ].join(' ')}
-          >
-            <span aria-hidden="true">{ICONS[t.kind]}</span> {t.message}
-          </div>
-        ))}
-      </div>
-    </ToastContext.Provider>
-  )
+    if (gameRole !== 'teacher') return
+    // 設定画面の失敗が残ったまま開始しても、ゲームでは3秒で片付ける。
+    const existingBefore = nextId.current
+    const timer = setTimeout(() => setItems(prev => prev.filter(item => item.id >= existingBefore)), 3000)
+    return () => clearTimeout(timer)
+  }, [gameRole])
+  useEffect(() => () => { if (saveTimer.current) clearTimeout(saveTimer.current); timers.current.forEach(clearTimeout) }, [])
+  const show = useCallback((message: string, kind: ToastKind = 'error') => {
+    // 先生がログイン済みでも、生徒ルートに教師向け通知を表示しない。
+    if (audience.current.student || audience.current.gameRole === 'student') return
+    if (kind === 'success') {
+      if (saveTimer.current) clearTimeout(saveTimer.current)
+      setSaved(true)
+      saveTimer.current = setTimeout(() => setSaved(false), 1500)
+      return
+    }
+    const id = nextId.current++
+    setItems(prev => [...prev.filter(t => t.message !== message), { id, kind, message }])
+    if (kind !== 'error' || audience.current.gameRole === 'teacher') {
+      const timer = setTimeout(() => { setItems(prev => prev.filter(t => t.id !== id)); timers.current.delete(timer) }, 3000)
+      timers.current.add(timer)
+    }
+  }, [])
+  const api = useMemo(() => ({ show, saved, setGameRole }), [show, saved])
+  useEffect(() => { onReady?.(show) }, [onReady, show])
+  return <ToastContext.Provider value={api}>
+    {children}
+    {!student && gameRole !== 'student' && <div className="pointer-events-none fixed inset-x-0 bottom-0 z-[60] flex flex-col items-center gap-3 p-4 pb-safe" aria-live="polite">
+      {items.map(t => <div key={t.id} role={t.kind === 'error' ? 'alert' : 'status'} className={`pointer-events-auto flex w-full max-w-md items-center gap-3 rounded-xl border-2 p-3 font-bold shadow-lg ${t.kind === 'error' ? 'border-danger-500 bg-danger-50 text-danger-700' : 'border-brand-500 bg-brand-50 text-brand-700'}`}>
+        <p className="flex-1">{t.kind === 'error' ? '⚠' : 'ℹ'} {t.message}</p>
+        <button className="min-h-11 min-w-11 rounded-xl border-2 px-2" aria-label="通知を閉じる" onClick={() => setItems(prev => prev.filter(i => i.id !== t.id))}>閉じる</button>
+      </div>)}
+    </div>}
+  </ToastContext.Provider>
 }
