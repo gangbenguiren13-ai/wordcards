@@ -85,7 +85,7 @@ function MiniSetup({ set, cards, game }: { set: MaterialSet; cards: Card[]; game
   }
   if (playing) return game === 'memory' ? <MemoryGame teacher set={set} items={playing.items} settings={playing.memory} voice={voice} onExit={() => navigate(`/t/sets/${set.id}/play`)} />
     : <SlowRevealGame set={set} items={playing.items} settings={playing.reveal} voice={voice} teacher onExit={() => navigate(`/t/sets/${set.id}/play`)} />
-  return <><AppHeader title={`${GAME_NAMES[game]}のせってい`} back={`/t/sets/${set.id}/play`} />
+  return <><AppHeader title={`${GAME_NAMES[game]}の設定`} back={`/t/sets/${set.id}/play`} />
     <main className="mx-auto flex max-w-2xl flex-col gap-4 p-4 pb-12">
       <IssuePanel issues={validateSet({ title: set.title, mode: set.mode, gamesConfig: set.games_config, cards }).filter(i => i.level === 'warning')} />
       <QuickStart feedback={<>{/* 折りたたんでも開始できない理由を隠さない */}{insufficient && <p role="alert">{game === 'memory' ? `${memory.cardCount}枚で遊ぶには${memory.cardCount / 2}件の教材カードが必要です。枚数を減らすか、カードを追加してください。` : '画像のあるカードを追加してください。'}</p>}{blocked && <p role="alert">教材の未入力・エラーを直してから始めてください。</p>}{failedAction === 'start' && <ActionError error={error} onRetry={() => void start()} onDismiss={() => setError('')} busy={busy} />}</>} game={`${game}:${set.id}`} count={game === 'memory' ? memory.cardCount : usable.length}

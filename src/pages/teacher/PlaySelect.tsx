@@ -96,7 +96,9 @@ export function PlaySelectPage() {
       <main className="mx-auto flex max-w-3xl flex-col gap-4 p-4">
         {empty && (
           <p className="rounded-xl border-2 border-warn-500 bg-warn-50 p-4 font-bold text-warn-700">
-            ！ カードがまだありません。先に教材セットにカードを追加してください。
+            <span aria-hidden="true" className="mb-3 block text-4xl">🃏</span>
+            カードがまだありません。先に教材セットにカードを追加してください。
+            <Link to={`/t/sets/${id}/edit`} className="mt-3 flex min-h-11 items-center justify-center rounded-xl border-2 border-line bg-surface p-3">カードを追加する</Link>
           </p>
         )}
         {blocked && (
