@@ -10,14 +10,16 @@ export interface MemoryTile { item: PreloadedCard; side: 0 | 1 }
 export function makeBoard(items: PreloadedCard[]): MemoryTile[] {
   return shuffled(items.flatMap(item => [{ item, side: 0 as const }, { item, side: 1 as const }]))
 }
-export function MemoryGame({ set, items, settings: s, voice, onExit, teacher = false }: {
-  teacher?: boolean; set: MaterialSet; items: PreloadedCard[]; settings: MemoryDefaults; voice: SpeechSynthesisVoice | null; onExit: () => void
+export function MemoryGame({ set, items, settings: s, voice, onExit, teacher = false, cooperativePlayers = 1 }: {
+  teacher?: boolean; cooperativePlayers?: number; set: MaterialSet; items: PreloadedCard[]; settings: MemoryDefaults; voice: SpeechSynthesisVoice | null; onExit: () => void
 }) {
+  const players = s.teams === 1 ? Math.max(1, Math.min(4, Math.floor(cooperativePlayers) || 1)) : 1
   const [board] = useState(() => makeBoard(items))
   const [open, setOpen] = useState<number[]>([])
   const [matched, setMatched] = useState<string[]>([])
   const [scores, setScores] = useState(() => Array.from({ length: s.teams }, () => 0))
   const [team, setTeam] = useState(0)
+  const [player, setPlayer] = useState(0)
   const [elapsed, setElapsed] = useState(0)
   const [audioOn, setAudioOn] = useState(true)
   const [exit, setExit] = useState(false)
@@ -75,6 +77,7 @@ export function MemoryGame({ set, items, settings: s, voice, onExit, teacher = f
     }
     timer.current = setTimeout(() => {
       setOpen([]); lock.current = false
+      if (players > 1) setPlayer(p => (p + 1) % players)
       if (!match && (s.timeLimitMinutes === null || Date.now() - started.current! < s.timeLimitMinutes * 60000)) setTeam(t => (t + 1) % s.teams)
     }, match ? 350 : 900)
   }
@@ -85,8 +88,9 @@ export function MemoryGame({ set, items, settings: s, voice, onExit, teacher = f
       <Button variant="primary" onClick={() => { silence(); setShowResults(true) }}>{teacher ? '結果を見る' : 'けっかを みる'}</Button>
     </div> : undefined}>
     <div className="sticky top-0 z-10 flex flex-wrap justify-center gap-2 bg-canvas p-2" aria-live="polite">
+      {players > 1 && <p className="w-full text-center text-xl font-bold">{players}にんで きょうりょく{!ended ? `・${player + 1}ばんの ひとのばん` : ''}</p>}
       {scores.map((score, i) => <p key={i} className={`rounded-xl border-2 p-2 font-bold ${i === team && !ended ? 'border-brand-500 bg-brand-50' : 'border-line'}`}>
-        {s.teams > 1 ? `チーム${i + 1}${i === team && !ended ? ' のばん' : ''}：` : 'そろったペア：'}{score}</p>)}
+        {s.teams > 1 ? `チーム${i + 1}${i === team && !ended ? ' のばん' : ''}：` : players > 1 ? 'みんなで そろえたペア：' : 'そろったペア：'}{score}</p>)}
       <p className="p-2 tabular-nums">{s.timeLimitMinutes ? `のこり ${Math.max(0, s.timeLimitMinutes * 60 - elapsed)}` : elapsed}秒</p>
     </div>
     {teacher && audioError && <p role="alert" className="p-2 text-center text-danger">{audioError}</p>}
