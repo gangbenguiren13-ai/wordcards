@@ -8,6 +8,7 @@ import { preloadCards, releasePreloaded, type PreloadedCard } from '@/lib/preloa
 import { hasBlockingError, validateSet } from '@/lib/validation'
 import { memorySettings, revealSettings, pickMemoryCards, memoryCards, STUDENT_GAME_NAMES, type MiniGame } from '@/games/shared/miniGames'
 import { MemorySettingsPanel, RevealSettingsPanel } from '@/games/shared/MiniSettings'
+import { ChoiceGroup, SettingRow } from '@/games/shared/SettingsPanel'
 import { MemoryGame } from '@/games/shared/MemoryGame'
 import { SlowRevealGame } from '@/games/shared/SlowRevealGame'
 import type { MaterialSet, MemoryDefaults, SlowRevealDefaults } from '@/types'
@@ -22,6 +23,8 @@ export function SharedMini({ token, set, game, voice, onBack }: {
 }) {
   const [memory, setMemory] = useState(() => memorySettings(set))
   const [reveal, setReveal] = useState(() => revealSettings(set))
+  // 今回この端末で遊ぶ人数。教材・サーバー・端末ストレージへは保存しない。
+  const [cooperativePlayers, setCooperativePlayers] = useState(1)
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
   const [unavailable, setUnavailable] = useState<SharedError | null>(null)
@@ -57,12 +60,19 @@ export function SharedMini({ token, set, game, voice, onBack }: {
     finally { lock.current = false; if (alive.current) setBusy(false) }
   }
   if (unavailable) return <StudentLoadError error={unavailable} onRetry={() => {}} />
-  if (playing) return game === 'memory' ? <MemoryGame set={playing.set} items={playing.items} settings={playing.memory} voice={voice} onExit={onBack} />
+  if (playing) return game === 'memory' ? <MemoryGame set={playing.set} items={playing.items} settings={playing.memory} cooperativePlayers={cooperativePlayers} voice={voice} onExit={onBack} />
     : <SlowRevealGame set={playing.set} items={playing.items} settings={playing.reveal} voice={voice} onExit={onBack} />
   return <main data-audience="student" className="mx-auto flex max-w-lg flex-col gap-4 p-5">
-    <Button onClick={onBack}>← ゲームえらびへ</Button><h1 className="text-center text-2xl font-bold">{STUDENT_GAME_NAMES[game]}</h1>
+    <Button disabled={busy} onClick={onBack}>← ゲームえらびへ</Button><h1 className="text-center text-2xl font-bold">{STUDENT_GAME_NAMES[game]}</h1>
     <p>{game === 'memory' ? '2まいずつ めくって、ペアを さがそう。' : 'すこしずつ みえる えを あててみよう。'}</p>
-    <fieldset disabled={busy}>{game === 'memory' ? <MemorySettingsPanel value={memory} onChange={setMemory} mode={set.mode} adjustable={set.games_config.memory?.studentAdjustable ?? []} />
+    <fieldset disabled={busy} className="[&_button]:min-h-16">
+      {game === 'memory' && memory.teams === 1 && <SettingRow label="あそぶ にんずう" hint="1だいを いっしょに つかいます。みんなで そうだんして、じゅんばんに めくろう。">
+        <ChoiceGroup value={cooperativePlayers} onChange={setCooperativePlayers} options={[
+          { value: 1, label: 'ひとりで あそぶ' }, { value: 2, label: '2にんで きょうりょく' },
+          { value: 3, label: '3にんで きょうりょく' }, { value: 4, label: '4にんで きょうりょく' },
+        ]} />
+      </SettingRow>}
+      {game === 'memory' ? <MemorySettingsPanel value={memory} onChange={setMemory} mode={set.mode} adjustable={set.games_config.memory?.studentAdjustable ?? []} />
       : <RevealSettingsPanel value={reveal} onChange={setReveal} mode={set.mode} adjustable={set.games_config.slowreveal?.studentAdjustable ?? []} />}</fieldset>
     {error && <p role="alert" className="font-bold text-danger-700">{error}</p>}
     <Button variant="primary" size="xl" block disabled={busy} onClick={() => void start()}>{busy ? 'よみこみちゅう…' : '▶ はじめる'}</Button>

@@ -26,7 +26,7 @@ function SharedSession({ token }: { token: string }) {
   const query = useQuery({ queryKey: ['shared', token], queryFn: () => fetchSharedSet(token),
     retry: false, gcTime: 0, staleTime: 0, refetchOnWindowFocus: false, refetchOnReconnect: false })
   const [busy, setBusy] = useState(false)
-  const [mini, setMini] = useState<MiniGame | null>(null)
+  const [game, setGame] = useState<MiniGame | 'flashcards' | null>(null)
   const [error, setError] = useState('')
   const [unavailable, setUnavailable] = useState<SharedError | null>(null)
   const [progress, setProgress] = useState({ done: 0, total: 0 })
@@ -78,20 +78,28 @@ function SharedSession({ token }: { token: string }) {
   }
 
   if (unavailable) return <StudentLoadError error={unavailable} onRetry={() => {}} />
-  if (playing) return <FlashcardsGame {...playing} voice={voice} onExit={() => { setPlaying(null); void query.refetch() }} />
+  if (playing) return <FlashcardsGame {...playing} voice={voice} onExit={() => { setPlaying(null); setGame(null); void query.refetch() }} />
   if (query.isPending) return <Spinner />
   if (query.isError) return <StudentLoadError error={query.error} retrying={query.isFetching} onRetry={() => void query.refetch()} />
   const entry = query.data.set.gamesConfig.flashcards
   const publicData = sharedGameData(query.data)
   const availableMini = (['memory', 'slowreveal'] as const).filter(game => publicData.set.games_config[game]?.enabledForStudents &&
     (game === 'memory' ? memoryCards(publicData.cards, memorySettings(publicData.set)).length >= 4 : publicData.cards.some(c => c.image_path)))
-  if (mini) return <SharedMini token={token} set={publicData.set} game={mini} voice={voice} onBack={() => { setMini(null); void query.refetch() }} />
-  return <main data-audience="student" className="mx-auto flex min-h-dvh max-w-lg flex-col justify-center gap-5 p-6 text-center">
+  const backToGames = () => { setGame(null); setError(''); void query.refetch() }
+  if (game && game !== 'flashcards') return <SharedMini token={token} set={publicData.set} game={game} voice={voice} onBack={backToGames} />
+  if (!game) return <main data-audience="student" className="mx-auto flex min-h-dvh max-w-lg flex-col justify-center gap-5 p-6 text-center">
     <h1 className="text-2xl font-bold">{query.data.set.title}</h1>
-    {availableMini.length > 0 && <section className="flex flex-col gap-3"><h2 className="font-bold">ゲームをえらぶ</h2>
-      {availableMini.map(game => <Button key={game} size="xl" disabled={busy} onClick={() => setMini(game)}>{STUDENT_GAME_NAMES[game]}で あそぶ</Button>)}
-    </section>}
-    {entry?.enabledForStudents && <p className="font-bold">フラッシュカード</p>}
+    <h2 className="text-xl font-bold">ゲームをえらぶ</h2>
+    <section aria-label="あそべるゲーム" className="flex flex-col gap-3">
+      {entry?.enabledForStudents && <Button size="xl" onClick={() => setGame('flashcards')}>フラッシュカードで あそぶ</Button>}
+      {availableMini.map(kind => <Button key={kind} size="xl" onClick={() => setGame(kind)}>{STUDENT_GAME_NAMES[kind]}で あそぶ</Button>)}
+    </section>
+    {!entry?.enabledForStudents && !availableMini.length && <p>いま つかえるゲームは ありません。先生に かくにんしてね。</p>}
+  </main>
+  return <main data-audience="student" className="mx-auto flex min-h-dvh max-w-lg flex-col justify-center gap-5 p-6 text-center">
+    <Button disabled={busy} onClick={backToGames}>← ゲームえらびへ</Button>
+    <h1 className="text-2xl font-bold">フラッシュカード</h1>
+    <p>{query.data.set.title}</p>
     {error && <p role="alert" className="font-bold text-danger-700">{error}</p>}
     {!entry?.enabledForStudents ? (availableMini.length ? null : <p>いま つかえるゲームは ありません。先生に かくにんしてね。</p>) : <>
       {entry.studentAdjustable.includes('order') && <label className="flex flex-col gap-2 font-bold">出すじゅんばん
