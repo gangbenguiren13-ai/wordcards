@@ -17,12 +17,14 @@ export function GameWord({ word, mode = 'handheld' }: { word: string; mode?: Scr
       text.current.style.fontSize = `${fitWordSize(target, box.current.clientWidth, text.current.scrollWidth)}px`
     }
     measure()
+    let active = true
+    void document.fonts?.ready.then(() => { if (active) measure() })
     const observer = typeof ResizeObserver === 'undefined' ? null : new ResizeObserver(measure)
     if (box.current) observer?.observe(box.current)
     window.addEventListener('resize', measure)
-    return () => { observer?.disconnect(); window.removeEventListener('resize', measure) }
+    return () => { active = false; observer?.disconnect(); window.removeEventListener('resize', measure) }
   }, [word, mode])
   return <div ref={box} className="w-full min-w-0 shrink-0 text-center">
-    <span ref={text} className="inline-block whitespace-nowrap font-bold leading-tight" style={{ fontSize: mode === 'classroom' ? '12vh' : '8vh' }}>{word}</span>
+    <span ref={text} className="game-word inline-block whitespace-nowrap font-bold leading-tight" style={{ fontSize: mode === 'classroom' ? '12vh' : '8vh' }}>{word}</span>
   </div>
 }

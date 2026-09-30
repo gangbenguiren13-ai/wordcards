@@ -1,3 +1,4 @@
+import { GameIcon } from '@/components/GameIcon'
 import type { ScreenMode } from './GameWord'
 import { useToast } from '@/components/toast/useToast'
 import { useEffect, type ReactNode } from 'react'
@@ -51,19 +52,19 @@ export function GameShell({
   }, [])
 
   const classroom = screenMode === 'classroom'
-  const exitButton = <Button size="xl" onClick={onExit} aria-label="ゲームをやめる">← やめる</Button>
-  const audioButton = audioEnabled && onToggleAudio && <Button size="xl" onClick={onToggleAudio}
-    aria-label={audioOn ? '音を消す' : '音を出す'} aria-pressed={audioOn} className={audioOn ? 'border-brand-500 bg-brand-50' : ''}>
-    {audioOn ? '🔊 音あり' : '🔇 音なし'}</Button>
-  return <div data-audience={teacher ? 'teacher' : 'student'} data-screen-mode={screenMode} className="game-shell no-select flex h-dvh flex-col bg-canvas">
-    <header className="flex shrink-0 flex-wrap items-center gap-3 border-b-2 border-line bg-surface p-4">
+  const exitButton = <Button variant="paper" size="xl" onClick={onExit} aria-label="ゲームをやめる"><GameIcon name="left" />やめる</Button>
+  const audioButton = audioEnabled && onToggleAudio && <Button variant={audioOn ? 'sound' : 'muted'} size="xl" onClick={onToggleAudio}
+    aria-label={audioOn ? '音を消す' : '音を出す'} aria-pressed={audioOn} >
+    <GameIcon name={audioOn ? 'sound' : 'muted'} />{teacher ? (audioOn ? '音あり' : '音なし') : (audioOn ? 'おと あり' : 'おと なし')}</Button>
+  return <div data-audience={teacher ? 'teacher' : 'student'} data-screen-mode={screenMode} className="game-shell no-select flex h-dvh flex-col bg-game-bg text-white">
+    <header className="flex shrink-0 flex-wrap items-center gap-3 border-b-2 border-game-line bg-game-panel p-4">
       {!classroom && exitButton}
       <h1 className="min-w-0 flex-1 truncate text-center text-xl font-bold">{title}</h1>
-      {showProgress && progress && <span className={`rounded-lg bg-canvas px-3 py-2 font-bold tabular-nums ${classroom ? 'text-[28px]' : 'text-xl'}`}>{progress.current}／{progress.total}</span>}
+      {showProgress && progress && <span className={`rounded-lg bg-game-bg px-3 py-2 font-bold tabular-nums ${classroom ? 'text-[28px]' : 'text-xl'}`}>{progress.current}／{progress.total}</span>}
       {!classroom && audioButton}
     </header>
     <main className="flex min-h-0 flex-1 flex-col overflow-y-auto p-4">{children}</main>
-    {(footer || classroom) && <footer className="shrink-0 border-t-2 border-line bg-surface p-4 pb-safe">
+    {(footer || classroom) && <footer className="shrink-0 border-t-2 border-game-line bg-game-panel p-4 pb-safe">
       {footer}
       {classroom && <div className="mt-3 flex flex-wrap justify-between gap-3">{exitButton}{audioButton}</div>}
     </footer>}
