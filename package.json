@@ -4,12 +4,15 @@
   "version": "0.1.0",
   "type": "module",
   "scripts": {
+    "fonts:subset": "node scripts/subset-fonts.mjs",
     "dev": "vite",
     "build": "tsc -b && vite build",
     "preview": "vite preview",
     "typecheck": "tsc -b --noEmit",
     "lint": "eslint .",
-    "test": "vitest run"
+    "test": "vitest run",
+    "fonts:check": "node scripts/check-fonts.mjs",
+    "prebuild": "node scripts/check-fonts.mjs"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.112.4",
@@ -36,8 +39,10 @@
     "@vitejs/plugin-react": "^5.1.0",
     "eslint": "^9.39.0",
     "eslint-plugin-react-hooks": "^7.1.0",
+    "fontkit": "2.0.4",
     "globals": "^17.11.0",
     "jsdom": "^30.0.1",
+    "subset-font": "2.9.0",
     "tailwindcss": "^4.3.3",
     "typescript": "^5.9.3",
     "typescript-eslint": "^8.46.0",
