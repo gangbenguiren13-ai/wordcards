@@ -44,16 +44,29 @@ function allGamesPayload() {
 }
 
 describe('匿名の共有ページ', () => {
+  it('小学校の入口と3種類の準備画面は英字を表示せず教師リンクもない', async () => {
+    const p = allGamesPayload(); p.set.mode = 'elementary'; p.set.title = 'どうぶつ'
+    p.set.gamesConfig = defaultGamesConfig('elementary'); p.set.gamesConfig.slowreveal!.enabledForStudents = true
+    vi.mocked(fetchSharedSet).mockResolvedValue(p); mount()
+    await screen.findByRole('heading', { name: 'どれで あそぶ？' })
+    expect(document.body.textContent).not.toMatch(/[A-Za-z]/)
+    for (const name of ['フラッシュカードで あそぶ', 'しんけいすいじゃくで あそぶ', 'ゆっくりみえるゲームで あそぶ']) {
+      fireEvent.click(screen.getByRole('button', { name }))
+      expect(document.body.textContent).not.toMatch(/[A-Za-z]/)
+      expect(screen.queryAllByRole('link')).toHaveLength(0)
+      fireEvent.click(screen.getByRole('button', { name: 'ゲームえらびへ' }))
+    }
+  })
   it('公開された3ゲームを同列に選べて、それぞれの設定から戻れる', async () => {
     vi.mocked(fetchSharedSet).mockResolvedValue(allGamesPayload())
     mount()
     for (const name of ['フラッシュカードで あそぶ', 'しんけいすいじゃくで あそぶ', 'ゆっくりみえるゲームで あそぶ']) {
       fireEvent.click(await screen.findByRole('button', { name }))
-      expect(screen.getByRole('button', { name: '▶ はじめる' })).toBeDefined()
-      fireEvent.click(screen.getByRole('button', { name: '← ゲームえらびへ' }))
+      expect(screen.getByRole('button', { name: 'はじめる' })).toBeDefined()
+      fireEvent.click(screen.getByRole('button', { name: 'ゲームえらびへ' }))
     }
     await screen.findByRole('heading', { name: 'ゲームをえらぶ' })
-    expect(screen.queryByRole('button', { name: '▶ はじめる' })).toBeNull()
+    expect(screen.queryByRole('button', { name: 'はじめる' })).toBeNull()
     expect(screen.queryAllByRole('link')).toHaveLength(0)
   })
   it('非公開ゲームは一覧に出さない', async () => {
@@ -70,11 +83,12 @@ describe('匿名の共有ページ', () => {
       .mockResolvedValue({ items: sharedGameData(p).cards.map(card => ({ card, imageUrl: 'blob:test', pairImageUrl: null, audio: null })), failures: [] })
     mount(); fireEvent.click(await screen.findByRole('button', { name: 'しんけいすいじゃくで あそぶ' }))
     fireEvent.click(screen.getByRole('button', { name: '3にんで きょうりょく' }))
-    fireEvent.click(screen.getByRole('button', { name: '▶ はじめる' }))
+    fireEvent.click(screen.getByRole('button', { name: 'はじめる' }))
     await screen.findByRole('alert')
     expect(screen.getByRole('button', { name: '3にんで きょうりょく' }).getAttribute('aria-pressed')).toBe('true')
-    fireEvent.click(screen.getByRole('button', { name: '▶ はじめる' }))
-    await screen.findByText('3にんで きょうりょく・1ばんの ひとのばん')
+    fireEvent.click(screen.getByRole('button', { name: 'はじめる' }))
+    await screen.findByText('1ばんの ひとの ばん')
+    expect(document.querySelectorAll('.turn-banner .player-token')).toHaveLength(3)
     expect(screen.getByText('みんなで そろえたペア：0')).toBeDefined()
     expect(screen.getAllByRole('button', { name: /^カード \d+$/ })).toHaveLength(12)
     expect(localStorage.length).toBe(0)
@@ -104,21 +118,21 @@ describe('匿名の共有ページ', () => {
     vi.mocked(fetchSharedSet).mockResolvedValueOnce(p).mockResolvedValueOnce(stopped)
     mount(); fireEvent.click(await screen.findByRole('button', { name: 'しんけいすいじゃくで あそぶ' }))
     expect(screen.queryByText('ペアの種類')).toBeNull()
-    fireEvent.click(screen.getByRole('button', { name: '▶ はじめる' }))
+    fireEvent.click(screen.getByRole('button', { name: 'はじめる' }))
     expect((await screen.findByRole('alert')).textContent).toContain('おやすみちゅう')
     expect(preloadCards).not.toHaveBeenCalled()
     expect(screen.queryAllByRole('link')).toHaveLength(0)
   })
   it('教師用リンクを出さず、開始時にも共有状態を確認する', async () => {
     localStorage.setItem('wordcards.flashcards.settings', JSON.stringify({ order: 'random' }))
-    mount(); await chooseFlashcards(); fireEvent.click(screen.getByRole('button', { name: '▶ はじめる' }))
+    mount(); await chooseFlashcards(); fireEvent.click(screen.getByRole('button', { name: 'はじめる' }))
     await screen.findByText('ゲーム開始 junior sequential')
     expect(fetchSharedSet).toHaveBeenCalledTimes(2)
     expect(screen.queryAllByRole('link')).toHaveLength(0)
   })
   it('開始前に共有が停止された場合はゲームを開始しない', async () => {
     vi.mocked(fetchSharedSet).mockResolvedValueOnce(payload()).mockRejectedValueOnce(new SharedError(404))
-    mount(); await chooseFlashcards(); fireEvent.click(screen.getByRole('button', { name: '▶ はじめる' }))
+    mount(); await chooseFlashcards(); fireEvent.click(screen.getByRole('button', { name: 'はじめる' }))
     expect((await screen.findByRole('alert')).textContent).toContain('このQRコードは つかえません')
     expect(screen.queryAllByRole('button')).toHaveLength(0)
     expect(preloadCards).not.toHaveBeenCalled()
@@ -127,7 +141,7 @@ describe('匿名の共有ページ', () => {
     const p = payload(); p.set.gamesConfig.flashcards!.enabledForStudents = false
     vi.mocked(fetchSharedSet).mockResolvedValue(p); mount()
     await screen.findByText(/いま つかえるゲームは/)
-    expect(screen.queryByRole('button', { name: '▶ はじめる' })).toBeNull()
+    expect(screen.queryByRole('button', { name: 'はじめる' })).toBeNull()
   })
   it('読み込み失敗後に再試行できる', async () => {
     vi.mocked(fetchSharedSet).mockRejectedValueOnce(new SharedError(503)).mockResolvedValue(payload())
@@ -137,7 +151,7 @@ describe('匿名の共有ページ', () => {
   it('メディア失敗時に解放して再試行できる', async () => {
     vi.mocked(preloadCards).mockResolvedValueOnce({ items: [], failures: [{ cardId: 'a', reason: 'timeout' }] })
       .mockResolvedValue({ items: [], failures: [] })
-    mount(); await chooseFlashcards(); fireEvent.click(screen.getByRole('button', { name: '▶ はじめる' }))
+    mount(); await chooseFlashcards(); fireEvent.click(screen.getByRole('button', { name: 'はじめる' }))
     fireEvent.click(await screen.findByRole('button', { name: 'もういちど はじめる' }))
     await screen.findByText('ゲーム開始 junior sequential')
     expect(releasePreloaded).toHaveBeenCalled()
@@ -145,7 +159,7 @@ describe('匿名の共有ページ', () => {
   it('取得中にページを離れた場合もBlobを解放する', async () => {
     let finish!: (result: Awaited<ReturnType<typeof preloadCards>>) => void
     vi.mocked(preloadCards).mockImplementation(() => new Promise(resolve => { finish = resolve }))
-    const view = mount(); await chooseFlashcards(); fireEvent.click(screen.getByRole('button', { name: '▶ はじめる' }))
+    const view = mount(); await chooseFlashcards(); fireEvent.click(screen.getByRole('button', { name: 'はじめる' }))
     await waitFor(() => expect(preloadCards).toHaveBeenCalled())
     view.unmount(); finish({ items: [], failures: [] })
     await waitFor(() => expect(releasePreloaded).toHaveBeenCalled())

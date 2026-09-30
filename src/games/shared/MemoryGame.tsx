@@ -1,3 +1,6 @@
+import { Celebration } from '@/components/Celebration'
+import { PlayerToken } from '@/components/PlayerToken'
+import { GameIcon } from '@/components/GameIcon'
 import { useEffect, useRef, useState } from 'react'
 import type { MaterialSet, MemoryDefaults } from '@/types'
 import type { PreloadedCard } from '@/lib/preload'
@@ -85,23 +88,27 @@ export function MemoryGame({ set, items, settings: s, voice, onExit, teacher = f
     onToggleAudio={() => { setAudioOn(!audioOn); silence() }}
     footer={ended && !showResults ? <div className="flex flex-wrap items-center justify-center gap-3 text-center">
       <h2 className="text-xl font-bold" role="status">{matched.length === items.length ? 'ぜんぶ そろった！' : 'じかんです！'}</h2>
-      <Button variant="primary" onClick={() => { silence(); setShowResults(true) }}>{teacher ? '結果を見る' : 'けっかを みる'}</Button>
+      <Button variant="play" onClick={() => { silence(); setShowResults(true) }}>{teacher ? '結果を見る' : 'けっかを みる'}</Button>
     </div> : undefined}>
-    <div className="sticky top-0 z-10 flex flex-wrap justify-center gap-2 bg-canvas p-2" aria-live="polite">
-      {players > 1 && <p className="w-full text-center text-xl font-bold">{players}にんで きょうりょく{!ended ? `・${player + 1}ばんの ひとのばん` : ''}</p>}
-      {scores.map((score, i) => <p key={i} className={`rounded-xl border-2 p-2 font-bold ${i === team && !ended ? 'border-brand-500 bg-brand-50' : 'border-line'}`}>
+    {!showResults && <div className="memory-status sticky top-0 z-10 rounded-2xl bg-game-panel" aria-live="polite">
+      {players > 1 && !ended && <div className="turn-banner" key={player}><span>{player + 1}ばんの ひとの ばん</span><span className="flex gap-3">{Array.from({ length: players }, (_, i) => <PlayerToken key={i} number={i + 1} active={i === player} />)}</span></div>}
+      <div className="memory-totals">
+      <div aria-hidden="true" className="pair-stars">{items.map((item, i) => <GameIcon key={item.card.id} name="star" filled={i < matched.length} />)}</div>
+      {scores.map((score, i) => <p key={i} className={`rounded-lg border-2 px-2 font-bold ${i === team && !ended ? 'border-game-yellow bg-game-yellow text-[#2a1e00]' : 'border-game-line'}`}>
         {s.teams > 1 ? `チーム${i + 1}${i === team && !ended ? ' のばん' : ''}：` : players > 1 ? 'みんなで そろえたペア：' : 'そろったペア：'}{score}</p>)}
-      <p className="p-2 tabular-nums">{s.timeLimitMinutes ? `のこり ${Math.max(0, s.timeLimitMinutes * 60 - elapsed)}` : elapsed}秒</p>
-    </div>
-    {teacher && audioError && <p role="alert" className="p-2 text-center text-danger">{audioError}</p>}
-    {showResults ? <section className="flex flex-1 flex-col items-center justify-center gap-5 p-6 text-center">
-      <h2 className="text-3xl font-bold">{teacher ? '結果' : 'けっか'}</h2>
-      <p>{matched.length} / {items.length}ペア・{elapsed}秒</p>
-      <Button onClick={() => setShowResults(false)}>{teacher ? 'カードに戻る' : 'カードに もどる'}</Button>
-      <Button variant="primary" onClick={onExit}>ゲームえらびへ</Button>
+      <p className="tabular-nums">{s.timeLimitMinutes ? `のこり ${Math.max(0, s.timeLimitMinutes * 60 - elapsed)}` : elapsed}{teacher ? '秒' : 'びょう'}</p>
+      </div>
+    </div>}
+    {teacher && audioError && <p role="alert" className="rounded-xl bg-white p-2 text-center text-danger-700">{audioError}</p>}
+    {showResults ? <section className="memory-result flex flex-1 flex-col items-center justify-center gap-3 p-4 text-center">
+      <Celebration /><h2 className="text-3xl font-bold">{teacher ? '結果' : 'けっか'}</h2>
+      <p className="text-xl tabular-nums">{matched.length} / {items.length}ペア・{elapsed}{teacher ? '秒' : 'びょう'}</p>
+      {s.teams > 1 && <div className="flex flex-wrap justify-center gap-4">{scores.map((score, i) => <p key={i} className="rounded-xl border-2 border-game-line px-4 py-2 text-xl font-bold">チーム{i + 1}：{score}</p>)}</div>}
+      <Button variant="paper" onClick={() => setShowResults(false)}>{teacher ? 'カードに戻る' : 'カードに もどる'}</Button>
+      <Button variant="play" onClick={onExit}>ゲームえらびへ</Button>
     </section> : <>
-    {set.audio_enabled && <p className="pb-2 text-center text-sm">{audioOn ? 'そろったカードを おすと、もういちど きけます。' : '聞き直すときは「音を出す」を押してください。'}</p>}
-    <div className={`mx-auto grid w-full max-w-6xl gap-2 ${board.length === 20 ? 'grid-cols-4 landscape:grid-cols-5' : 'grid-cols-4'}`}>
+    {set.audio_enabled && <p className="pb-2 text-center text-sm">{audioOn ? 'そろったカードを おすと、もういちど きけます。' : (teacher ? '聞き直すときは「音を出す」を押してください。' : 'もういちど きくときは「おと」を おしてね。')}</p>}
+    <div className={`memory-board mx-auto grid w-full max-w-6xl gap-2 ${board.length === 20 ? 'grid-cols-4 min-[700px]:grid-cols-5' : 'grid-cols-4'}`}>
       {board.map((tile, i) => {
         const faceUp = (!ended && open.includes(i)) || matched.includes(tile.item.card.id)
         const done = matched.includes(tile.item.card.id)
@@ -109,21 +116,21 @@ export function MemoryGame({ set, items, settings: s, voice, onExit, teacher = f
         const src = s.pairType === 'image_pairimage' && tile.side === 1 ? tile.item.pairImageUrl : tile.item.imageUrl
         const replayable = done && set.audio_enabled && audioOn
         return <button key={i} type="button" aria-label={`カード ${i + 1}${done ? ` そろった${replayable ? ' もう一度聞く' : ''}` : faceUp ? ' おもて' : ''}`} aria-pressed={faceUp}
-          disabled={done ? !replayable : ended || (open.length === 2)} onClick={() => done ? play(tile.item) : flip(i, Date.now())} className="relative min-h-20 rounded-xl focus-visible:outline-4 focus-visible:outline-brand-500"
+          disabled={done ? !replayable : ended || (open.length === 2)} onClick={() => done ? play(tile.item) : flip(i, Date.now())} className={`memory-tile relative min-h-20 rounded-xl focus-visible:outline-4 focus-visible:outline-brand-500 ${done ? 'memory-tile--matched' : open.length === 2 && open.includes(i) ? 'memory-tile--miss' : ''}`}
           style={{ height: `clamp(80px, ${board.length <= 12 ? '22' : '16'}dvh, 220px)`, perspective: '900px' }}>
           <span className="relative block h-full w-full transition-transform duration-300 motion-reduce:transition-none" style={{ transformStyle: 'preserve-3d', transform: faceUp ? 'rotateY(180deg)' : 'rotateY(0deg)' }}>
-            <span aria-hidden="true" className="absolute inset-0 flex items-center justify-center rounded-xl border-2 border-brand-500 bg-brand-50 text-3xl font-bold" style={{ backfaceVisibility: 'hidden' }}>{i + 1}</span>
-            <span className="absolute inset-0 flex items-center justify-center overflow-hidden rounded-xl border-2 border-brand-500 bg-surface p-2" style={{ backfaceVisibility: 'hidden', transform: 'rotateY(180deg)' }}>
-              {faceUp && (text ? <span className="break-all font-bold leading-tight" style={{ fontSize: `clamp(16px, ${Math.min(8.4, 22 / Math.max(1, tile.item.card.word.length))}vw, 72px)` }}>{tile.item.card.word}</span> : src ? <img src={src} alt="" className="h-full w-full object-contain" /> : null)}
-              {done && <span className="absolute right-1 top-0 text-2xl font-bold text-brand-700">✓</span>}
-              {replayable && <span aria-hidden="true" className="absolute bottom-1 right-1 rounded-full bg-surface px-1 text-xl">🔊</span>}
+            <span aria-hidden="true" className="absolute inset-0 flex items-center justify-center memory-back rounded-xl text-4xl font-bold" style={{ backfaceVisibility: 'hidden' }}>{i + 1}</span>
+            <span className="absolute inset-0 flex items-center justify-center overflow-hidden memory-front rounded-xl bg-surface p-2 text-ink" style={{ backfaceVisibility: 'hidden', transform: 'rotateY(180deg)' }}>
+              {faceUp && (text ? <span className="game-word break-all font-bold leading-tight" style={{ fontSize: `clamp(16px, ${Math.min(8.4, 22 / Math.max(1, tile.item.card.word.length))}vw, 72px)` }}>{tile.item.card.word}</span> : src ? <img src={src} alt="" className="h-full w-full object-contain" /> : null)}
+              {done && <span className="absolute right-1 top-1 flex text-2xl font-bold text-[#725000]"><GameIcon name="star" filled /><GameIcon name="check" /></span>}
+              {replayable && <span aria-hidden="true" className="absolute bottom-1 right-1 rounded-full bg-surface px-1 text-xl"><GameIcon name="sound" /></span>}
             </span>
           </span>
         </button>
       })}
     </div></>}
-    <Dialog open={exit} title="ゲームをやめますか？" onCancel={() => setExit(false)} onConfirm={onExit} confirmLabel="やめる" cancelLabel="つづける">
-      <p>いまの得点は保存されません。</p>
+    <Dialog game danger open={exit} title="ゲームをやめますか？" onCancel={() => setExit(false)} onConfirm={onExit} confirmLabel="やめる" cancelLabel="つづける">
+      <p>{teacher ? 'いまの得点は保存されません。' : 'いまの けっかは のこりません。'}</p>
     </Dialog>
   </GameShell>
 }

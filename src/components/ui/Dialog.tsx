@@ -3,6 +3,7 @@ import { Button } from './Button'
 
 interface Props {
   open: boolean
+  game?: boolean
   title: string
   children?: ReactNode
   feedback?: ReactNode
@@ -17,6 +18,7 @@ interface Props {
 /** 破壊的操作の前に必ず出す確認ダイアログ（計画書 14） */
 export function Dialog({
   open,
+  game = false,
   title,
   children,
   feedback,
@@ -64,17 +66,17 @@ export function Dialog({
         role="dialog"
         aria-modal="true"
         aria-label={title}
-        className="w-full max-w-md rounded-2xl bg-surface p-6 shadow-xl"
+        className={`w-full max-w-md rounded-2xl bg-surface p-6 shadow-xl ${game ? 'text-ink' : ''}`}
       >
         <h2 className="text-xl font-bold">{title}</h2>
         {children && <div className="mt-3 text-ink-soft">{children}</div>}
         <div className="mt-6 flex gap-3">
-          <Button block onClick={onCancel} disabled={busy}>
+          <Button variant={game ? 'paper' : 'secondary'} block onClick={onCancel} disabled={busy}>
             {cancelLabel}
           </Button>
           <Button
             block
-            variant={danger ? 'danger' : 'primary'}
+            variant={game ? (danger ? 'stop' : 'play') : (danger ? 'danger' : 'primary')}
             onClick={onConfirm}
             disabled={busy}
           >

@@ -1,3 +1,4 @@
+import { useGameFont } from '@/games/shared/useGameFont'
 import { ActionError } from '@/components/ActionError'
 import { LoadingProgress } from '@/components/LoadingProgress'
 import { useToast } from '@/components/toast/useToast'
@@ -36,6 +37,7 @@ function MiniSetup({ set, cards, game }: { set: MaterialSet; cards: Card[]; game
   const [failedAction, setFailedAction] = useState<'start' | 'save'>('start')
   const navigate = useNavigate()
   const qc = useQueryClient()
+  useGameFont(set.mode)
   const [memory, setMemory] = useState(() => lastMemorySettings(set))
   const [reveal, setReveal] = useState(() => lastRevealSettings(set))
   const [enabled, setEnabled] = useState(set.games_config[game]?.enabledForStudents ?? false)

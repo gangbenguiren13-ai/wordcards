@@ -1,3 +1,5 @@
+import { GameChoices } from '@/components/GameChoices'
+import { GameIcon } from '@/components/GameIcon'
 import { LoadingProgress } from '@/components/LoadingProgress'
 import { useEffect, useRef, useState } from 'react'
 import { fetchSharedSet, sharedGameData, SharedError } from '@/api/shared'
@@ -8,7 +10,7 @@ import { preloadCards, releasePreloaded, type PreloadedCard } from '@/lib/preloa
 import { hasBlockingError, validateSet } from '@/lib/validation'
 import { memorySettings, revealSettings, pickMemoryCards, memoryCards, STUDENT_GAME_NAMES, type MiniGame } from '@/games/shared/miniGames'
 import { MemorySettingsPanel, RevealSettingsPanel } from '@/games/shared/MiniSettings'
-import { ChoiceGroup, SettingRow } from '@/games/shared/SettingsPanel'
+import { SettingRow } from '@/games/shared/SettingsPanel'
 import { MemoryGame } from '@/games/shared/MemoryGame'
 import { SlowRevealGame } from '@/games/shared/SlowRevealGame'
 import type { MaterialSet, MemoryDefaults, SlowRevealDefaults } from '@/types'
@@ -62,20 +64,17 @@ export function SharedMini({ token, set, game, voice, onBack }: {
   if (unavailable) return <StudentLoadError error={unavailable} onRetry={() => {}} />
   if (playing) return game === 'memory' ? <MemoryGame set={playing.set} items={playing.items} settings={playing.memory} cooperativePlayers={cooperativePlayers} voice={voice} onExit={onBack} />
     : <SlowRevealGame set={playing.set} items={playing.items} settings={playing.reveal} voice={voice} onExit={onBack} />
-  return <main data-audience="student" className="mx-auto flex max-w-lg flex-col gap-4 p-5">
-    <Button disabled={busy} onClick={onBack}>← ゲームえらびへ</Button><h1 className="text-center text-2xl font-bold">{STUDENT_GAME_NAMES[game]}</h1>
+  return <main data-audience="student" className="student-surface student-prep"><div className="student-prep-panel">
+    <Button variant="paper" disabled={busy} onClick={onBack}><GameIcon name="left" />ゲームえらびへ</Button><h1 className="text-center text-2xl font-bold">{STUDENT_GAME_NAMES[game]}</h1>
     <p>{game === 'memory' ? '2まいずつ めくって、ペアを さがそう。' : 'すこしずつ みえる えを あててみよう。'}</p>
     <fieldset disabled={busy} className="[&_button]:min-h-16">
       {game === 'memory' && memory.teams === 1 && <SettingRow label="あそぶ にんずう" hint="1だいを いっしょに つかいます。みんなで そうだんして、じゅんばんに めくろう。">
-        <ChoiceGroup value={cooperativePlayers} onChange={setCooperativePlayers} options={[
-          { value: 1, label: 'ひとりで あそぶ' }, { value: 2, label: '2にんで きょうりょく' },
-          { value: 3, label: '3にんで きょうりょく' }, { value: 4, label: '4にんで きょうりょく' },
-        ]} />
+        <GameChoices players value={cooperativePlayers} onChange={setCooperativePlayers} values={[1, 2, 3, 4]} />
       </SettingRow>}
-      {game === 'memory' ? <MemorySettingsPanel value={memory} onChange={setMemory} mode={set.mode} adjustable={set.games_config.memory?.studentAdjustable ?? []} />
-      : <RevealSettingsPanel value={reveal} onChange={setReveal} mode={set.mode} adjustable={set.games_config.slowreveal?.studentAdjustable ?? []} />}</fieldset>
+      {game === 'memory' ? <MemorySettingsPanel student value={memory} onChange={setMemory} mode={set.mode} adjustable={set.games_config.memory?.studentAdjustable ?? []} />
+      : <RevealSettingsPanel student value={reveal} onChange={setReveal} mode={set.mode} adjustable={set.games_config.slowreveal?.studentAdjustable ?? []} />}</fieldset>
     {error && <p role="alert" className="font-bold text-danger-700">{error}</p>}
-    <Button variant="primary" size="xl" block disabled={busy} onClick={() => void start()}>{busy ? 'よみこみちゅう…' : '▶ はじめる'}</Button>
-    {busy && <LoadingProgress {...progress} label="カードの画像と音声を よみこみちゅう" />}
-  </main>
+    <Button variant="play" size="xl" block disabled={busy} onClick={() => void start()}><GameIcon name="play" filled />{busy ? 'よみこみちゅう…' : 'はじめる'}</Button>
+    {busy && <LoadingProgress student audioEnabled={set.audio_enabled} {...progress} label="カードの がぞうと おんせいを よみこみちゅう" />}
+  </div></main>
 }

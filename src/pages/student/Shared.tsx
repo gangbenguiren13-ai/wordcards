@@ -1,10 +1,13 @@
+import { Mascot } from '@/components/mascot/Mascot'
+import { useGameFont } from '@/games/shared/useGameFont'
+import { GameIcon } from '@/components/GameIcon'
 import { LoadingProgress } from '@/components/LoadingProgress'
 import { useEffect, useRef, useState } from 'react'
 import { useParams } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
 import { fetchSharedSet, sharedGameData, SharedError } from '@/api/shared'
 import { StudentLoadError } from '@/components/StudentLoadError'
-import { Button, Spinner } from '@/components/ui'
+import { Button } from '@/components/ui'
 import { FlashcardsGame } from '@/games/flashcards/FlashcardsGame'
 import { effectiveDisplay, type FlashcardsSettings } from '@/games/flashcards/settings'
 import { FLASHCARDS_DEFAULTS } from '@/lib/gameDefaults'
@@ -27,6 +30,7 @@ function SharedSession({ token }: { token: string }) {
     retry: false, gcTime: 0, staleTime: 0, refetchOnWindowFocus: false, refetchOnReconnect: false })
   const [busy, setBusy] = useState(false)
   const [game, setGame] = useState<MiniGame | 'flashcards' | null>(null)
+  useGameFont(query.data?.set.mode, game !== null)
   const [error, setError] = useState('')
   const [unavailable, setUnavailable] = useState<SharedError | null>(null)
   const [progress, setProgress] = useState({ done: 0, total: 0 })
@@ -79,7 +83,7 @@ function SharedSession({ token }: { token: string }) {
 
   if (unavailable) return <StudentLoadError error={unavailable} onRetry={() => {}} />
   if (playing) return <FlashcardsGame {...playing} voice={voice} onExit={() => { setPlaying(null); setGame(null); void query.refetch() }} />
-  if (query.isPending) return <Spinner />
+  if (query.isPending) return <main data-audience="student" className="student-surface"><LoadingProgress student /></main>
   if (query.isError) return <StudentLoadError error={query.error} retrying={query.isFetching} onRetry={() => void query.refetch()} />
   const entry = query.data.set.gamesConfig.flashcards
   const publicData = sharedGameData(query.data)
@@ -87,17 +91,22 @@ function SharedSession({ token }: { token: string }) {
     (game === 'memory' ? memoryCards(publicData.cards, memorySettings(publicData.set)).length >= 4 : publicData.cards.some(c => c.image_path)))
   const backToGames = () => { setGame(null); setError(''); void query.refetch() }
   if (game && game !== 'flashcards') return <SharedMini token={token} set={publicData.set} game={game} voice={voice} onBack={backToGames} />
-  if (!game) return <main data-audience="student" className="mx-auto flex min-h-dvh max-w-lg flex-col justify-center gap-5 p-6 text-center">
-    <h1 className="text-2xl font-bold">{query.data.set.title}</h1>
-    <h2 className="text-xl font-bold">ゲームをえらぶ</h2>
-    <section aria-label="あそべるゲーム" className="flex flex-col gap-3">
-      {entry?.enabledForStudents && <Button size="xl" onClick={() => setGame('flashcards')}>フラッシュカードで あそぶ</Button>}
-      {availableMini.map(kind => <Button key={kind} size="xl" onClick={() => setGame(kind)}>{STUDENT_GAME_NAMES[kind]}で あそぶ</Button>)}
+  if (!game) return <main data-audience="student" className="student-surface game-choice-page">
+    <div className="choice-heading"><Mascot /><h1 className="speech-bubble">どれで あそぶ？</h1></div>
+    <p className="material-badge"><span>{query.data.set.title}</span><span>{publicData.cards.length}まい</span></p>
+    <h2 className="sr-only">ゲームをえらぶ</h2>
+    <section aria-label="あそべるゲーム" className="game-tiles">
+      {entry?.enabledForStudents && <button aria-label="フラッシュカードで あそぶ" className="game-tile game-tile--flash" onClick={() => setGame('flashcards')}>
+        <GameIcon name="cards" width="100" height="100" /><span>フラッシュカード<small>で あそぶ</small></span><GameIcon name="play" filled />
+      </button>}
+      {availableMini.map(kind => <button key={kind} aria-label={`${STUDENT_GAME_NAMES[kind]}で あそぶ`} className={`game-tile game-tile--${kind}`} onClick={() => setGame(kind)}>
+        <GameIcon name={kind === 'memory' ? 'star' : 'reveal'} width="100" height="100" /><span>{STUDENT_GAME_NAMES[kind]}<small>で あそぶ</small></span><GameIcon name="play" filled />
+      </button>)}
     </section>
     {!entry?.enabledForStudents && !availableMini.length && <p>いま つかえるゲームは ありません。先生に かくにんしてね。</p>}
   </main>
-  return <main data-audience="student" className="mx-auto flex min-h-dvh max-w-lg flex-col justify-center gap-5 p-6 text-center">
-    <Button disabled={busy} onClick={backToGames}>← ゲームえらびへ</Button>
+  return <main data-audience="student" className="student-surface student-prep">
+    <div className="student-prep-panel"><Button variant="paper" disabled={busy} onClick={backToGames}><GameIcon name="left" />ゲームえらびへ</Button>
     <h1 className="text-2xl font-bold">フラッシュカード</h1>
     <p>{query.data.set.title}</p>
     {error && <p role="alert" className="font-bold text-danger-700">{error}</p>}
@@ -112,11 +121,11 @@ function SharedSession({ token }: { token: string }) {
           value={override.advance ?? entry.defaults.advance} onChange={(e) => setOverride((s) => ({ ...s, advance: e.target.value as FlashcardsSettings['advance'] }))}>
           <option value="manual">タッチでおくる</option><option value="auto">じどうでおくる</option>
         </select></label>}
-      <Button variant="primary" size="xl" block disabled={busy} onClick={() => void start()}>
-        {busy ? 'よみこみちゅう…' : error ? 'もういちど はじめる' : '▶ はじめる'}
+      <Button variant="play" size="xl" block disabled={busy} onClick={() => void start()}>
+        <GameIcon name="play" filled />{busy ? 'よみこみちゅう…' : error ? 'もういちど はじめる' : 'はじめる'}
       </Button>
     </>}
-    {busy && <LoadingProgress {...progress} label="カードの画像と音声を よみこみちゅう" />}
+    {busy && <LoadingProgress student audioEnabled={query.data.set.audioEnabled} {...progress} label="カードの がぞうと おんせいを よみこみちゅう" />}
     <p className="text-sm text-ink-soft">はじめに がぞうと おんせいを よみこみます。</p>
-  </main>
+  </div></main>
 }
