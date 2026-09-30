@@ -1,6 +1,6 @@
 import type { ButtonHTMLAttributes, ReactNode } from 'react'
 
-type Variant = 'primary' | 'secondary' | 'danger' | 'ghost'
+type Variant = 'primary' | 'secondary' | 'danger' | 'ghost' | 'play' | 'paper' | 'review' | 'muted' | 'sound' | 'stop'
 type Size = 'md' | 'lg' | 'xl'
 
 interface Props extends ButtonHTMLAttributes<HTMLButtonElement> {
@@ -11,6 +11,12 @@ interface Props extends ButtonHTMLAttributes<HTMLButtonElement> {
 }
 
 const VARIANTS: Record<Variant, string> = {
+  stop: 'game-button game-button--danger',
+  sound: 'game-button game-button--sound',
+  play: 'game-button game-button--play',
+  paper: 'game-button game-button--paper',
+  review: 'game-button game-button--review',
+  muted: 'game-button game-button--muted',
   primary:
     'bg-brand-600 text-white border-brand-600 hover:bg-brand-700 active:bg-brand-700',
   secondary:
@@ -41,7 +47,8 @@ export function Button({
       data-variant={variant}
       className={[
         'inline-flex items-center justify-center rounded-xl border-2 font-bold',
-        'transition-colors disabled:opacity-40 disabled:cursor-not-allowed',
+        'transition-colors disabled:cursor-not-allowed',
+        VARIANTS[variant].includes('game-button') ? 'disabled:saturate-0' : 'disabled:opacity-40',
         VARIANTS[variant],
         SIZES[size],
         block ? 'w-full' : '',

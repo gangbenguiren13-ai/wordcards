@@ -1,4 +1,5 @@
 interface Props {
+  student?: boolean
   label: string
   description?: string
   checked: boolean
@@ -7,7 +8,7 @@ interface Props {
 }
 
 /** 状態を色だけで示さず、ON/OFF の文字も併記する（計画書 11） */
-export function Toggle({ label, description, checked, onChange, disabled }: Props) {
+export function Toggle({ label, description, checked, onChange, disabled, student = false }: Props) {
   return (
     <button
       type="button"
@@ -31,7 +32,7 @@ export function Toggle({ label, description, checked, onChange, disabled }: Prop
           checked ? 'bg-brand-600 text-white' : 'bg-line text-ink-soft',
         ].join(' ')}
       >
-        {checked ? 'ON' : 'OFF'}
+        {student ? (checked ? 'あり' : 'なし') : (checked ? 'ON' : 'OFF')}
       </span>
     </button>
   )
