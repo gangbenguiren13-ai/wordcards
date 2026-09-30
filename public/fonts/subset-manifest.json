@@ -1,0 +1,54 @@
+{
+  "sources": [
+    {
+      "url": "https://raw.githubusercontent.com/google/fonts/84efd8ad78c3710ad14bd909e3bc407151885628/ofl/mplusrounded1c/MPLUSRounded1c-Bold.ttf",
+      "sha256": "c358630584e8e2d8fbd6121d0f4693255ffef6d1e6d4f3441fd6e5a963a11f9e"
+    },
+    {
+      "url": "https://raw.githubusercontent.com/google/fonts/84efd8ad78c3710ad14bd909e3bc407151885628/ofl/andika/Andika-Bold.ttf",
+      "sha256": "4361126189a2d0e0da66999352db58aaf1b4ca940faf8a8239d725f8303d890d"
+    }
+  ],
+  "glyphCount": 384,
+  "inputFiles": [
+    "src/components/Celebration.tsx",
+    "src/components/GameChoices.tsx",
+    "src/components/GameIcon.tsx",
+    "src/components/LoadingProgress.tsx",
+    "src/components/PlayerToken.tsx",
+    "src/components/StudentLoadError.tsx",
+    "src/components/mascot/Mascot.tsx",
+    "src/components/toast/ToastContext.ts",
+    "src/components/toast/useToast.ts",
+    "src/components/ui/index.ts",
+    "src/games/flashcards/FlashcardsGame.tsx",
+    "src/games/flashcards/reviewQueue.ts",
+    "src/games/flashcards/settings.ts",
+    "src/games/shared/EndScreen.tsx",
+    "src/games/shared/GameShell.tsx",
+    "src/games/shared/GameWord.tsx",
+    "src/games/shared/MemoryGame.tsx",
+    "src/games/shared/MiniSettings.tsx",
+    "src/games/shared/SettingsPanel.tsx",
+    "src/games/shared/SlowRevealGame.tsx",
+    "src/games/shared/miniGames.ts",
+    "src/games/shared/useGameFont.ts",
+    "src/pages/student/Shared.tsx",
+    "src/pages/student/SharedMini.tsx"
+  ],
+  "characters": {
+    "japanese": " !\"#$%&'()*+,-./0123456789:;<=>?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\\]^_`abcdefghijklmnopqrstuvwxyz{|}~…−★☆、。「」ぁあぃいぅうぇえぉおかがきぎくぐけげこごさざしじすずせぜそぞただちぢっつづてでとどなにぬねのはばぱひびぴふぶぷへべぺほぼぽまみむめもゃやゅゆょよらりるれろゎわゐゑをんゔゕゖ゙゚゛゜ゝゞゟ゠ァアィイゥウェエォオカガキギクグケゲコゴサザシジスズセゼソゾタダチヂッツヅテデトドナニヌネノハバパヒビピフブプヘベペホボポマミムメモャヤュユョヨラリルレロヮワヰヱヲンヴヵヶヷヸヹヺ・ーヽヾヿ一上下中人保信停像先再出分制前力動協単印右同向増声央存対少左度式弱形得戻抗押教数方時材枚果次止段決消減点生画番直矢確示神秒種答経結聞自表衰見認語通連開間関限階音順頭題類鳴！（）＋／：？",
+    "latin": " !\"#$%&'()*+,-./0123456789:;<=>?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\\]^_`abcdefghijklmnopqrstuvwxyz{|}~"
+  },
+  "englishFamily": "WordCards Latin",
+  "fonts": [
+    {
+      "file": "rounded-700.woff2",
+      "bytes": 44764
+    },
+    {
+      "file": "wordcards-latin-bold.woff2",
+      "bytes": 18032
+    }
+  ]
+}
