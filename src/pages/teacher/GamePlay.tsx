@@ -1,3 +1,4 @@
+import { useGameFont } from '@/games/shared/useGameFont'
 import { ActionError } from '@/components/ActionError'
 import { LoadingProgress } from '@/components/LoadingProgress'
 import { rememberUsed } from '@/lib/recentSets'
@@ -52,6 +53,7 @@ function FlashcardsPlayPage() {
   const [voice, setVoice] = useState<SpeechSynthesisVoice | null>(null)
 
   const set = setQuery.data
+  useGameFont(set?.mode, stage === 'settings')
   const settings: FlashcardsSettings | null = useMemo(
     () => (set ? { ...initialSettings(set), ...override } : null),
     [set, override],
