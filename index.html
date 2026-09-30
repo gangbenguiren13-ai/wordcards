@@ -7,9 +7,12 @@
     <meta name="referrer" content="no-referrer" />
     <meta name="theme-color" content="#1d4ed8" />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <link rel="preload" as="image" href="/mascot/mascot-jump.webp" />
     <title>WordCards</title>
   </head>
   <body>
+    <!-- Keep the result mascot loaded across repeated game/result screens. -->
+    <img src="/mascot/mascot-jump.webp" alt="" hidden class="hidden" aria-hidden="true" />
     <div id="root"></div>
     <script type="module" src="/src/main.tsx"></script>
   </body>
