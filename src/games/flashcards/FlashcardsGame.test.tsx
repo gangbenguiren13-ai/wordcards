@@ -81,9 +81,9 @@ describe('FlashcardsGame', () => {
 
   it('★を付けると見た目が変わる', () => {
     render(<FlashcardsGame set={makeSet()} items={makeItems(['dog'])} {...baseProps} />)
-    const btn = screen.getByText('☆ もういちど')
+    const btn = screen.getByRole('button', { name: '☆ もういちど', pressed: false })
     fireEvent.click(btn)
-    expect(screen.getByText('★ もういちど')).toBeDefined()
+    expect(screen.getByRole('button', { name: '★ もういちど', pressed: true })).toBeDefined()
   })
 
   it('最後まで送ると終了画面になる', () => {
@@ -98,9 +98,9 @@ describe('FlashcardsGame', () => {
 
   it('★を付けて終わると復習の案内が出る', () => {
     render(<FlashcardsGame set={makeSet()} items={makeItems(['dog'])} {...baseProps} />)
-    fireEvent.click(screen.getByText('☆ もういちど'))
+    fireEvent.click(screen.getByRole('button', { name: '☆ もういちど', pressed: false }))
     fireEvent.click(screen.getByLabelText('次のカード'))
-    expect(screen.getByText('★ のカードだけ もういちど')).toBeDefined()
+    expect(screen.getByRole('button', { name: 'のカードだけ もういちど' })).toBeDefined()
     expect(screen.getByText(/もういちど れんしゅう するカード/)).toBeDefined()
   })
 
@@ -120,7 +120,7 @@ describe('FlashcardsGame', () => {
     )
     expect(screen.queryByText('dog')).toBeNull()
     expect(screen.queryByText('こたえを みる')).toBeNull()
-    fireEvent.click(screen.getByText('☆ もういちど'))
+    fireEvent.click(screen.getByRole('button', { name: '☆ もういちど', pressed: false }))
     fireEvent.click(screen.getByLabelText('次のカード'))
     expect(screen.queryByText('dog')).toBeNull()
   })

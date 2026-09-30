@@ -1,3 +1,4 @@
+import { GameIcon } from '@/components/GameIcon'
 import { GameWord } from '@/games/shared/GameWord'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import type { MaterialSet } from '@/types'
@@ -43,12 +44,14 @@ export function FlashcardsGame({ set, items, settings, voice, onExit, teacher = 
   )
   const [position, setPosition] = useState(0)
   const [flipped, setFlipped] = useState(false)
+  // 見た目専用：直前の変化が表裏の切りかえなら回り込み、カードの切りかえなら入ってくる動き。進行・★・音声には使わない
+  const [turned, setTurned] = useState(false)
   const [revealed, setRevealed] = useState(false)
   const [audioOn, setAudioOn] = useState(true)
   const [finished, setFinished] = useState(false)
   const [exitOpen, setExitOpen] = useState(false)
   function requestExit() { stopPlayback(); setExitOpen(true) }
-  const exitDialog = <Dialog open={exitOpen} title="ゲームを やめますか？" confirmLabel="ゲームをやめる" cancelLabel="ゲームをつづける" onConfirm={onExit} onCancel={() => setExitOpen(false)}>★のきろくは きえます。</Dialog>
+  const exitDialog = <Dialog game danger open={exitOpen} title="ゲームを やめますか？" confirmLabel="ゲームをやめる" cancelLabel="ゲームをつづける" onConfirm={onExit} onCancel={() => setExitOpen(false)}>★のきろくは きえます。</Dialog>
 
   const lastAdvance = useRef(0)
   const currentId = queue[position]
@@ -82,6 +85,7 @@ export function FlashcardsGame({ set, items, settings, voice, onExit, teacher = 
   const resetCardView = useCallback(() => {
     setFlipped(false)
     setRevealed(false)
+    setTurned(false)
   }, [])
 
   // Safariでは画面を離れて戻ると読み上げが止まったままになることがある
@@ -128,7 +132,9 @@ export function FlashcardsGame({ set, items, settings, voice, onExit, teacher = 
   }, [resetCardView])
 
   const flip = useCallback(() => {
-    if (twoSided) setFlipped((f) => !f)
+    if (!twoSided) return
+    setFlipped((f) => !f)
+    setTurned(true)
   }, [twoSided])
 
   const toggleMark = useCallback(() => {
@@ -225,7 +231,7 @@ export function FlashcardsGame({ set, items, settings, voice, onExit, teacher = 
     const stillHas = hasRemainingReview(states)
     return (
       <GameShell teacher={teacher} screenMode={settings.screenMode} title={set.title} onExit={requestExit}>
-        <EndScreen
+        <EndScreen teacher={teacher}
           title={stillHas ? 'おつかれさま！' : 'ぜんぶ できました！'}
           message={stillHas ? undefined : '★のカードはもうありません。'}
           reviewCards={marked}
@@ -244,9 +250,9 @@ export function FlashcardsGame({ set, items, settings, voice, onExit, teacher = 
     return (
       <GameShell teacher={teacher} screenMode={settings.screenMode} title={set.title} onExit={requestExit}>
         <section className="m-auto flex flex-col items-center gap-4 text-center">
-          <span aria-hidden="true" className="text-5xl">🃏</span>
+          <span aria-hidden="true" className="text-5xl"><GameIcon name="cards" width="64" height="64" /></span>
           <p className="font-bold">このセットには表示できるカードがありません。</p>
-          <Button size="xl" onClick={requestExit}>ゲームえらびに もどる</Button>
+          <Button variant="paper" size="xl" onClick={requestExit}>ゲームえらびに もどる</Button>
         </section>
         {exitDialog}
     </GameShell>
@@ -292,40 +298,40 @@ export function FlashcardsGame({ set, items, settings, voice, onExit, teacher = 
       onExit={requestExit}
       footer={
         <div className="mx-auto flex max-w-5xl flex-wrap gap-3">
-          <Button size="xl" onClick={goPrev} disabled={position === 0} aria-label="前のカード">
-            ←
+          <Button variant="paper" size="xl" onClick={goPrev} disabled={position === 0} aria-label="前のカード">
+            <GameIcon name="left" />
           </Button>
           {set.audio_enabled && (
-            <Button size="xl" onClick={playCurrent} aria-label="音を鳴らす" disabled={!audioOn}>
-              🔊
+            <Button variant="paper" size="xl" onClick={playCurrent} className="sound-ripple" aria-label="音を鳴らす" disabled={!audioOn}>
+              <GameIcon name="sound" />
             </Button>
           )}
           {set.mode !== 'elementary' && display === 'image_only' && set.show_word_on_answer && (
-            <Button size="xl" onClick={() => setRevealed(true)} disabled={revealed}>
+            <Button variant="paper" size="xl" onClick={() => setRevealed(true)} disabled={revealed}>
               こたえを みる
             </Button>
           )}
           {twoSided && (
-            <Button size="xl" onClick={flip}>
+            <Button variant="paper" size="xl" onClick={flip}>
               うらを みる
             </Button>
           )}
-          <Button
+          <Button variant={isMarked ? 'review' : 'paper'}
             size="xl"
             onClick={toggleMark}
             aria-pressed={isMarked}
-            className={isMarked ? 'border-warn-500 bg-warn-50 text-warn-700' : ''}
+            aria-label={isMarked ? '★ もういちど' : '☆ もういちど'}
           >
-            {isMarked ? '★ もういちど' : '☆ もういちど'}
+            <GameIcon name="star" filled={isMarked} />もういちど
           </Button>
-          <Button variant="primary" size="xl" className="min-w-32 flex-1" onClick={goNext} aria-label="次のカード">
-            つぎへ →
+          <Button variant="play" size="xl" className="min-w-32 flex-1" onClick={goNext} aria-label="次のカード">
+            つぎへ <GameIcon name="right" />
           </Button>
         </div>
       }
     >
       <div
-        className="relative flex min-h-0 flex-1 cursor-pointer touch-manipulation flex-col items-center justify-center gap-4 rounded-2xl border-2 border-line bg-surface px-[clamp(64px,12%,96px)] py-4"
+        className="flash-deck relative flex min-h-0 flex-1 cursor-pointer touch-manipulation flex-col items-center justify-center gap-4 rounded-2xl border-2 border-line bg-surface text-ink px-[clamp(64px,12%,96px)] py-4"
         onPointerDown={onPointerDown}
         onPointerUp={onPointerUp}
         onPointerCancel={() => { touchStart.current = null }}
@@ -333,11 +339,12 @@ export function FlashcardsGame({ set, items, settings, voice, onExit, teacher = 
         tabIndex={0}
         aria-label="カード。中央と右の矢印でつぎへ、左の矢印でまえへ"
       >
-        <span aria-hidden="true" className={`pointer-events-none absolute inset-y-0 left-0 flex w-[clamp(64px,12%,96px)] items-center justify-center rounded-l-2xl bg-brand-50 text-4xl text-brand-700 ${position === 0 ? 'opacity-15' : 'opacity-50'}`}>←</span>
-        <span aria-hidden="true" className="pointer-events-none absolute inset-y-0 right-0 flex w-[clamp(64px,12%,96px)] items-center justify-center rounded-r-2xl bg-brand-50 text-4xl text-brand-700 opacity-50">→</span>
+        <span aria-hidden="true" className={`pointer-events-none absolute inset-y-0 left-0 flex w-[clamp(64px,12%,96px)] items-center justify-center rounded-l-2xl bg-brand-50 text-4xl text-brand-700 ${position === 0 ? 'opacity-15' : 'opacity-50'}`}><GameIcon name="left" /></span>
+        <span aria-hidden="true" className="pointer-events-none absolute inset-y-0 right-0 flex w-[clamp(64px,12%,96px)] items-center justify-center rounded-r-2xl bg-brand-50 text-4xl text-brand-700 opacity-50"><GameIcon name="right" /></span>
+        <div key={`${currentId}:${twoSided && flipped}`} className={`flash-face ${twoSided && turned ? 'flash-face--turn' : ''}`} data-flipped={twoSided && flipped}><div className="flash-content">
         {isMarked && (
-          <span className="absolute left-3 top-3 rounded-lg bg-warn-500 px-2 py-1 text-sm font-bold text-white">
-            ★
+          <span className="review-sticker absolute left-3 top-3 rounded-lg bg-game-star px-2 py-1 text-sm font-bold text-[#2a1e00]">
+            <GameIcon name="star" filled />
           </span>
         )}
         {showImage &&
@@ -352,6 +359,7 @@ export function FlashcardsGame({ set, items, settings, voice, onExit, teacher = 
             <span className="flex flex-1 items-center text-ink-soft">画像なし</span>
           ))}
         {showWord && <GameWord word={word} mode={settings.screenMode} />}
+        </div></div>
       </div>
       {exitDialog}
     </GameShell>
