@@ -92,7 +92,7 @@ function SharedSession({ token }: { token: string }) {
   const backToGames = () => { setGame(null); setError(''); void query.refetch() }
   if (game && game !== 'flashcards') return <SharedMini token={token} set={publicData.set} game={game} voice={voice} onBack={backToGames} />
   if (!game) return <main data-audience="student" className="student-surface game-choice-page">
-    <div className="choice-heading"><Mascot /><h1 className="speech-bubble">どれで あそぶ？</h1></div>
+    <div className="choice-heading"><Mascot interactive fetchWhenIdle /><h1 className="speech-bubble">どれで あそぶ？</h1></div>
     <p className="material-badge"><span>{query.data.set.title}</span><span>{publicData.cards.length}まい</span></p>
     <h2 className="sr-only">ゲームをえらぶ</h2>
     <section aria-label="あそべるゲーム" className="game-tiles">

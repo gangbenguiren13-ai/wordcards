@@ -5,7 +5,7 @@ import { Mascot } from './mascot/Mascot'
 export function Celebration() {
   return <div className="celebration" aria-hidden="true">
     <div className="confetti">{Array.from({ length: 24 }, (_, i) => <i key={i} style={{ '--i': i } as CSSProperties} />)}</div>
-    <Mascot pose="jump" className="mascot-jump" />
+    <Mascot interactive pose="jump" className="mascot-jump" />
     <span className="done-stamp">できた！</span>
   </div>
 }

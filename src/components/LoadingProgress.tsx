@@ -1,4 +1,5 @@
 import { GameIcon } from './GameIcon'
+import { Mascot } from './mascot/Mascot'
 import { useEffect, useState } from 'react'
 
 export function LoadingProgress({ done = 0, total, label = '教材を よみこみちゅう', unit = '枚', student = false, audioEnabled = false }: {
@@ -7,11 +8,14 @@ export function LoadingProgress({ done = 0, total, label = '教材を よみこ�
   const [slow, setSlow] = useState(false)
   useEffect(() => { const timer = setTimeout(() => setSlow(true), 3000); return () => clearTimeout(timer) }, [])
   if (student) return <div role="status" className="student-loading">
-    <div className="loading-cards" aria-hidden="true">{[0, 1, 2].map(n => <span key={n} style={{ animationDelay: `${n * 160}ms` }}><GameIcon name="cards" width="56" height="56" /></span>)}</div>
-    <p>{label}</p><p className="loading-count">{total !== undefined ? `${done}／${total}まい` : 'まいすうを かくにんちゅう'}</p>
-    <progress aria-label={label} value={total ? done : undefined} max={total || 1} />
-    {audioEnabled && <p>きこえたら、まねして いってみよう</p>}
-    {slow && <p className="loading-hint">すこし じかんが かかっているよ。つうしんを たしかめてね。</p>}
+    <Mascot interactive />
+    <div className="loading-details">
+      <div className="loading-cards" aria-hidden="true">{[0, 1, 2].map(n => <span key={n} style={{ animationDelay: `${n * 160}ms` }}><GameIcon name="cards" width="56" height="56" /></span>)}</div>
+      <p>{label}</p><p className="loading-count">{total !== undefined ? `${done}／${total}まい` : 'まいすうを かくにんちゅう'}</p>
+      <progress aria-label={label} value={total ? done : undefined} max={total || 1} />
+      {audioEnabled && <p>きこえたら、まねして いってみよう</p>}
+      {slow && <p className="loading-hint">すこし じかんが かかっているよ。つうしんを たしかめてね。</p>}
+    </div>
   </div>
   return <div role="status" className="flex flex-col items-center gap-3 p-4 text-center">
     <p className="text-xl font-bold">{label} {total !== undefined ? `${done}／${total}${student ? 'まい' : unit}` : (student ? '（まいすうを かくにんちゅう）' : '（枚数を確認中）')}</p>
