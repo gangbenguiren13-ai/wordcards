@@ -1,5 +1,6 @@
 import { useId, useState, type ReactNode } from 'react'
 import { Button } from '@/components/ui'
+import { GameIcon } from '@/components/GameIcon'
 
 const key = (game: string, field: string) => `wordcards.setup.${game}.${field}`
 export function hasStarted(game: string): boolean {
@@ -29,15 +30,15 @@ export function QuickStart({ game, count, summary, disabled, busy, onStart, chil
     try { localStorage.setItem(key(game, 'expanded'), String(next)) } catch { /* noop */ }
   }
   return <>
-    <section aria-label="ゲームをはじめる" className="flex flex-col gap-3 rounded-2xl border-2 border-brand-100 bg-surface p-4">
-      <Button variant="primary" size="xl" block disabled={disabled || busy} onClick={onStart}>
+    <section aria-label="ゲームをはじめる" className="teacher-quick-start">
+      <Button variant="play" icon={<GameIcon name="play" filled />} size="xl" block disabled={disabled || busy} onClick={onStart}>
         {busy ? 'よみこみちゅう…' : `${previous ? '前回と同じ設定ではじめる' : 'はじめる'}（${count}枚）`}
       </Button>
       {feedback}
       <p className="text-center text-base text-ink-soft" aria-label="設定の要約">{summary}</p>
     </section>
-    {controls}
-    <Button aria-expanded={open} aria-controls={id} disabled={busy} onClick={toggle}>
+    {controls && <div className="teacher-screen-mode">{controls}</div>}
+    <Button variant="paper" aria-expanded={open} aria-controls={id} disabled={busy} onClick={toggle}>
       {open ? '▾ 設定を閉じる' : '▸ 設定を変える'}
     </Button>
     <div id={id} hidden={!open}>{children}</div>

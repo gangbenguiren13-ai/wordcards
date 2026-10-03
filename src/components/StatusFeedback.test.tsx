@@ -53,6 +53,14 @@ it('読み込み内容と枚数を表示し、3秒後だけ遅延を案内する
   act(() => vi.advanceTimersByTime(3000)); expect(screen.getByText(/時間がかかっています/)).toBeDefined()
 })
 
+it.each([false, true])('ゲームの読み込みでも先生と生徒の文言を分ける（生徒=%s）', student => {
+  render(<LoadingProgress gameStyle student={student} done={12} total={27} label="カードの画像と音声を よみこみちゅう" />)
+  expect(screen.getByText(student ? '12／27まい' : '12／27枚')).toBeDefined()
+  expect(screen.queryByText(/時間がかかっています|すこし じかん/)).toBeNull()
+  act(() => vi.advanceTimersByTime(3000))
+  expect(screen.getByText(student ? 'すこし じかんが かかっているよ。つうしんを たしかめてね。' : '時間がかかっています。通信を たしかめてください。')).toBeDefined()
+})
+
 it('管理画面から持ち越した通知も教師ゲーム開始後は3秒で消す', () => {
   function Example() {
     const [playing, setPlaying] = useState(false)

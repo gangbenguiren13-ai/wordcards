@@ -1,0 +1,67 @@
+/* Loaded only by the lazy teacher entrance routes. */
+@font-face { font-family: "WordCards Rounded Teacher"; src: url('/fonts/rounded-700-teacher.woff2') format('woff2'); font-style: normal; font-weight: 700; font-display: swap; }
+.teacher-stage { min-height: 100dvh; background: #2a2873; color: #fff; font-family: "WordCards Rounded", "WordCards Rounded Teacher", "Hiragino Sans", "Yu Gothic", Meiryo, sans-serif; font-weight: 700; }
+.teacher-stage .teacher-header { background: #1f1d5e; border-color: #3a3794; color: #fff; }
+.teacher-header h1, .teacher-header > div > span { color: #fff; }
+.teacher-header .text-ink-soft { color: #c9c5ee; }
+.teacher-header [role="status"] { color: #7fe8c3; }
+.teacher-header .game-button { min-height: 44px; padding: 8px 14px; font-size: 16px; }
+.teacher-stage :focus-visible { outline-color: #ffc53d; }
+.teacher-login { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 460px); align-items: center; justify-content: center; gap: 64px; padding: 40px max(32px, calc((100vw - 1080px) / 2)); }
+.teacher-login-brand { text-align: center; }
+.teacher-login-brand .mascot-static { width: 280px; max-width: 100%; margin: 0 auto 16px; }
+.teacher-login-brand h1 { font-size: clamp(40px, 5vw, 64px); line-height: 1.2; margin-bottom: 16px; }
+.teacher-login-brand p { color: #c9c5ee; font-size: 18px; }
+.teacher-login-panel, .teacher-settings-panel, .teacher-warning { background: #fff; color: #1f1b3a; border-radius: 32px; box-shadow: 0 8px 0 #1f1d5e; padding: 28px; }
+.teacher-login-panel .text-ink-soft, .teacher-settings-panel .text-ink-soft { color: #4a4570; }
+.teacher-login-panel :focus-visible, .teacher-settings-panel :focus-visible, .teacher-warning :focus-visible { outline-color: #2a2873; }
+.teacher-login-tabs { display: flex; padding: 6px; gap: 6px; margin-bottom: 24px; border-radius: 18px; background: #edebfa; }
+.teacher-login-tab { flex: 1; min-height: 48px; padding: 8px; border-radius: 14px; color: #4a4570; }
+.teacher-login-tab[aria-selected="true"] { background: #2a2873; color: #fff; box-shadow: 0 3px 0 #1f1d5e; }
+.teacher-login-form { display: flex; flex-direction: column; gap: 18px; }
+.teacher-login-form input { min-height: 52px; border-radius: 14px; }
+.teacher-login-reset { color: #2a2873; text-decoration: underline; font-size: 14px; padding: 8px 0; }
+.teacher-selection { display: flex; flex-direction: column; align-items: center; gap: 20px; max-width: 1104px; margin: auto; padding: 20px 24px 32px; }
+.teacher-selection .mascot-interactive { width: 280px; }
+.teacher-selection .material-badge { max-width: 100%; overflow-wrap: anywhere; text-align: center; }
+.teacher-selection .game-tiles { gap: 20px; }
+.teacher-selection .game-tile { flex-direction: column; min-height: 240px; height: 100%; gap: 12px; padding: 20px; text-align: center; }
+.teacher-selection .game-tile > .game-icon { width: 48px; height: 48px; flex-shrink: 0; }
+.teacher-selection .game-tile > span { flex: none; }
+.teacher-game-summary { font-size: 16px; line-height: 1.6; }
+.teacher-game-disabled { filter: saturate(0); cursor: not-allowed; animation: none; }
+.teacher-game-disabled:active { transform: none; box-shadow: 0 10px 0 var(--tile-shadow); }
+.teacher-warning { width: 100%; border: 2px solid #d8dee7; border-radius: 24px; padding: 20px; }
+.teacher-settings-panel { display: flex; flex-direction: column; gap: 20px; width: calc(100% - 48px); max-width: 760px; margin: 28px auto 0; padding: 28px; }
+.teacher-stage:has(.teacher-settings-panel) { padding-bottom: 36px; }
+.teacher-stage > main:has(> p[role="alert"]) { background: #fff; color: #1f1b3a; border-radius: 24px; margin-top: 24px; }
+.teacher-quick-start { display: flex; flex-direction: column; gap: 16px; padding: 8px 0 12px; }
+.teacher-quick-start > .game-button { min-height: 72px; }
+.teacher-screen-mode { padding: 0 0 8px; }
+.teacher-screen-mode button { min-height: 80px; border-width: 3px; border-radius: 20px; font-size: 18px; color: #1f1b3a; background: #fff; border-color: #d6d2ed; box-shadow: 0 4px 0 #d6d2ed; }
+.teacher-screen-mode button[aria-pressed="true"] { border-color: #2a2873; background: #edebfa; box-shadow: 0 4px 0 #2a2873; }
+.teacher-screen-mode button[aria-pressed="true"]::after { content: ' ✓'; }
+.teacher-loading-page { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 20px; padding: 24px; text-align: center; }
+.teacher-loading-page > .student-loading { max-width: 1056px; }
+.teacher-loading-page > p { max-width: 760px; color: #c9c5ee; }
+.teacher-settings-panel:has(> .student-loading) { max-width: 1104px; background: transparent; box-shadow: none; color: #fff; padding: 0; }
+.teacher-settings-panel:has(> .student-loading) > :not(.student-loading) { display: none !important; }
+.teacher-stage[data-screen-mode="classroom"] *, .teacher-stage[data-screen-mode="classroom"] *::before, .teacher-stage[data-screen-mode="classroom"] *::after { animation: none !important; }
+@media (prefers-reduced-motion: reduce) { .teacher-stage *, .teacher-stage *::before, .teacher-stage *::after { animation: none !important; transition: none !important; } }
+@media (min-width: 1600px) {
+  .teacher-settings-panel { font-size: 20px; }
+  .teacher-settings-panel .text-base, .teacher-settings-panel button { font-size: 20px; }
+  .teacher-settings-panel .text-sm { font-size: 16px; }
+  .teacher-settings-panel .text-xs { font-size: 14px; }
+  .teacher-quick-start > .game-button { font-size: 24px; }
+}
+@media (max-width: 899px) {
+  .teacher-login { grid-template-columns: minmax(0, 460px); gap: 24px; padding: 28px 24px; }
+  .teacher-login-brand .mascot-static { width: 180px; margin-bottom: 8px; }
+  .teacher-login-brand h1 { font-size: 44px; margin-bottom: 8px; }
+  .teacher-selection .choice-heading { gap: 12px; }
+  .teacher-selection .mascot-interactive { width: 280px; }
+  .teacher-selection .speech-bubble { font-size: 28px; padding: 20px; }
+  .teacher-selection .game-tiles { grid-template-columns: minmax(0, 1fr); }
+  .teacher-selection .game-tile { min-height: 150px; gap: 8px; padding: 16px; }
+}

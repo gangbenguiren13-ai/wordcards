@@ -3,6 +3,8 @@ import { Navigate, useLocation } from 'react-router-dom'
 import { supabase, functionUrl, isSupabaseConfigured } from '@/lib/supabase'
 import { useAuth } from '@/auth/useAuth'
 import { Button, TextField } from '@/components/ui'
+import { Mascot } from '@/components/mascot/Mascot'
+import '@/styles/teacherStage.css'
 
 type Tab = 'login' | 'signup'
 
@@ -87,19 +89,20 @@ export function LoginPage() {
   }
 
   return (
-    <main className="mx-auto flex min-h-dvh max-w-md flex-col justify-center gap-6 p-6">
-      <header className="text-center">
-        <h1 className="text-3xl font-bold text-brand-700">WordCards</h1>
-        <p className="mt-1 text-ink-soft">英語のフラッシュカードとミニゲーム</p>
+    <main className="teacher-stage teacher-login">
+      <header className="teacher-login-brand">
+        <Mascot pose="wave" className="mascot-wave" />
+        <h1>WordCards</h1>
+        <p>英語のフラッシュカードとミニゲーム</p>
       </header>
-
+      <section className="teacher-login-panel" aria-label="先生のログイン">
       {!isSupabaseConfigured && (
         <p className="rounded-xl border-2 border-danger-500 bg-danger-50 p-4 text-sm font-bold text-danger-700">
           ⚠ 接続先が設定されていません。導入手順.md の「環境変数」の手順を確認してください。
         </p>
       )}
 
-      <div className="flex gap-2" role="tablist">
+      <div className="teacher-login-tabs" role="tablist">
         {(['login', 'signup'] as Tab[]).map((t) => (
           <button
             key={t}
@@ -110,12 +113,7 @@ export function LoginPage() {
               setError(null)
               setNotice(null)
             }}
-            className={[
-              'min-h-11 flex-1 rounded-xl border-2 font-bold',
-              tab === t
-                ? 'border-brand-500 bg-brand-50 text-brand-700'
-                : 'border-line bg-surface text-ink-soft',
-            ].join(' ')}
+            className="teacher-login-tab"
           >
             {t === 'login' ? 'ログイン' : '新規登録'}
           </button>
@@ -124,7 +122,7 @@ export function LoginPage() {
 
       <form
         onSubmit={tab === 'login' ? handleLogin : handleSignup}
-        className="flex flex-col gap-4 rounded-2xl bg-surface p-6 shadow-sm"
+        className="teacher-login-form"
       >
         {tab === 'signup' && (
           <TextField
@@ -173,7 +171,7 @@ export function LoginPage() {
           </p>
         )}
 
-        <Button type="submit" variant="primary" size="lg" block disabled={busy}>
+        <Button type="submit" variant="play" size="lg" block disabled={busy}>
           {busy ? '処理中…' : tab === 'login' ? 'ログイン' : 'アカウントを作る'}
         </Button>
 
@@ -181,12 +179,13 @@ export function LoginPage() {
           <button
             type="button"
             onClick={handleReset}
-            className="text-sm font-bold text-brand-600 underline"
+            className="teacher-login-reset"
           >
             パスワードを忘れた場合
           </button>
         )}
       </form>
+      </section>
     </main>
   )
 }

@@ -23,6 +23,7 @@ import { toJapaneseError } from '@/lib/errorMessage'
 import { DISPLAY_MODE_LABELS, type DisplayMode } from '@/types'
 import { AUTO_SECONDS_MAX, AUTO_SECONDS_MIN } from '@/lib/constants'
 import { MiniPlayPage } from './MiniPlay'
+import '@/styles/teacherStage.css'
 
 type Stage = 'settings' | 'loading' | 'playing'
 
@@ -78,22 +79,22 @@ function FlashcardsPlayPage() {
 
   if (setQuery.isError || cardsQuery.isError) {
     return (
-      <>
-        <AppHeader back={`/t/sets/${id}/play`} />
+      <div className="teacher-stage">
+        <AppHeader dark back={`/t/sets/${id}/play`} />
         <LoadError
           retrying={setQuery.isFetching || cardsQuery.isFetching}
           onRetry={() => { void setQuery.refetch(); void cardsQuery.refetch() }}
         />
-      </>
+      </div>
     )
   }
 
   if (setQuery.isLoading || cardsQuery.isLoading || !set || !settings) {
     return (
-      <>
-        <AppHeader back={`/t/sets/${id}/play`} />
+      <div className="teacher-stage">
+        <AppHeader dark back={`/t/sets/${id}/play`} />
         <Spinner />
-      </>
+      </div>
     )
   }
 
@@ -104,12 +105,12 @@ function FlashcardsPlayPage() {
 
   if (game !== 'flashcards' || blocked) {
     return (
-      <>
-        <AppHeader back={`/t/sets/${id}/play`} />
-        <p role="alert" className="p-6 text-center font-bold text-danger-700">
+      <div className="teacher-stage">
+        <AppHeader dark back={`/t/sets/${id}/play`} />
+        <p role="alert" className="teacher-warning">
           {blocked ? '教材に未入力や修正が必要な項目があります。教材を直してから始めてください。' : 'このゲームは準備中です。ゲーム選択に戻ってください。'}
         </p>
-      </>
+      </div>
     )
   }
 
@@ -161,17 +162,17 @@ function FlashcardsPlayPage() {
     )
   }
 
-  if (stage === 'loading') return <main className="mx-auto flex min-h-dvh max-w-lg flex-col justify-center p-6">
-    <LoadingProgress {...progress} label="カードの画像と音声を よみこみちゅう" />
+  if (stage === 'loading') return <main className="teacher-stage teacher-loading-page" data-screen-mode={settings.screenMode ?? 'handheld'}>
+    <LoadingProgress gameStyle audioEnabled={set.audio_enabled} {...progress} label="カードの画像と音声を よみこみちゅう" />
     <p className="text-center">さきに全部よみこむので、とちゅうで通信が切れても続けられます。</p>
   </main>
 
   const gameName = game === 'flashcards' ? 'フラッシュカード' : game
 
   return (
-    <>
-      <AppHeader title={`${gameName}の設定`} back={`/t/sets/${id}/play`} />
-      <main className="mx-auto flex max-w-2xl flex-col gap-3 p-4 pb-12">
+    <div className="teacher-stage">
+      <AppHeader dark title={`${gameName}の設定`} back={`/t/sets/${id}/play`} />
+      <main className="teacher-settings-panel">
         {usable.reason && (
           <p className="rounded-xl border-2 border-warn-500 bg-warn-50 p-3 text-sm font-bold text-warn-700">
             ！ {usable.reason}
@@ -314,6 +315,6 @@ function FlashcardsPlayPage() {
         </QuickStart>
       </main>
 
-    </>
+    </div>
   )
 }
