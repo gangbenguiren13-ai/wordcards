@@ -60,6 +60,19 @@ beforeEach(() => {
 afterEach(() => { cleanup(); clients.splice(0).forEach((client) => client.clear()) })
 
 describe('教材読み込みの失敗と再試行', () => {
+  it('先生の画面モードと設定開閉を保持し、同じ開始処理を呼ぶ', async () => {
+    localStorage.setItem('wordcards.setup.flashcards.started', 'true')
+    openPage()
+    await screen.findByRole('button', { name: '前回と同じ設定ではじめる（1枚）' })
+    fireEvent.click(screen.getByRole('button', { name: '教室で映す' }))
+    expect(screen.getByRole('button', { name: '教室で映す' }).getAttribute('aria-pressed')).toBe('true')
+    expect(JSON.parse(localStorage.getItem('wordcards.flashcards.settings')!).screenMode).toBe('classroom')
+    fireEvent.click(screen.getByRole('button', { name: '▸ 設定を変える' }))
+    expect(screen.getByRole('button', { name: '▾ 設定を閉じる' }).getAttribute('aria-expanded')).toBe('true')
+    fireEvent.click(screen.getByRole('button', { name: '前回と同じ設定ではじめる（1枚）' }))
+    await screen.findByText('ゲーム開始済み')
+    expect(preloadCards).toHaveBeenCalledOnce()
+  })
   it.each([false, true])('カード取得の通信失敗を表示し、再試行で復帰する（選択画面=%s）', async (selection) => {
     vi.mocked(getCards).mockRejectedValueOnce(new Error('Failed to fetch'))
     openPage(selection)

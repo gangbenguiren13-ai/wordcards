@@ -6,11 +6,14 @@ import { LoadError } from '@/components/LoadError'
 import { Spinner } from '@/components/ui'
 import { hasBlockingError, validateSet } from '@/lib/validation'
 import type { GameId } from '@/types'
+import { GameIcon, type GameIconName } from '@/components/GameIcon'
+import { Mascot } from '@/components/mascot/Mascot'
+import '@/styles/teacherStage.css'
 
 interface GameCard {
   id: GameId
   name: string
-  icon: string
+  icon: GameIconName
   summary: string
   ready: boolean
 }
@@ -25,21 +28,21 @@ const GAMES: GameCard[] = [
   {
     id: 'flashcards',
     name: 'フラッシュカード',
-    icon: '🃏',
+    icon: 'cards',
     summary: 'カードを1枚ずつ大きく見せる。言えなかったカードに★を付けて、その場でもう一度出せる。',
     ready: true,
   },
   {
     id: 'memory',
     name: '神経衰弱',
-    icon: '🔄',
+    icon: 'star',
     summary: '裏返したカードから同じ組を探す。ペアやチーム対抗にも使える。',
     ready: true,
   },
   {
     id: 'slowreveal',
     name: 'Slow Reveal',
-    icon: '🌅',
+    icon: 'reveal',
     summary: '画像を一方向からだんだん見せて、全部見える前に単語を当てる。',
     ready: true,
   },
@@ -52,22 +55,22 @@ export function PlaySelectPage() {
 
   if (setQuery.isError || cardsQuery.isError) {
     return (
-      <>
-        <AppHeader back="/t/home" />
+      <div className="teacher-stage">
+        <AppHeader dark back="/t/home" />
         <LoadError
           retrying={setQuery.isFetching || cardsQuery.isFetching}
           onRetry={() => { void setQuery.refetch(); void cardsQuery.refetch() }}
         />
-      </>
+      </div>
     )
   }
 
   if (setQuery.isLoading || cardsQuery.isLoading) {
     return (
-      <>
-        <AppHeader back="/t/home" />
+      <div className="teacher-stage">
+        <AppHeader dark back="/t/home" />
         <Spinner />
-      </>
+      </div>
     )
   }
 
@@ -75,12 +78,12 @@ export function PlaySelectPage() {
   const cards = cardsQuery.data ?? []
   if (!set) {
     return (
-      <>
-        <AppHeader back="/t/home" />
+      <div className="teacher-stage">
+        <AppHeader dark back="/t/home" />
         <p className="p-6 text-center font-bold text-danger-700">
           ⚠ この教材セットは見つかりませんでした。
         </p>
-      </>
+      </div>
     )
   }
 
@@ -91,18 +94,23 @@ export function PlaySelectPage() {
   const empty = cards.length === 0
 
   return (
-    <>
-      <AppHeader title={set.title} back="/t/home" />
-      <main className="mx-auto flex max-w-3xl flex-col gap-4 p-4">
+    <div className="teacher-stage">
+      <AppHeader dark title={set.title} back="/t/home" />
+      <main className="teacher-selection">
+        <div className="choice-heading">
+          <Mascot interactive fetchWhenIdle />
+          <h2 className="speech-bubble">ゲームをえらぶ</h2>
+        </div>
+        <div className="material-badge"><span>{set.title}</span><span>{cards.length}枚・{set.mode === 'elementary' ? '小学校' : '中学校'}</span></div>
         {empty && (
-          <p className="rounded-xl border-2 border-warn-500 bg-warn-50 p-4 font-bold text-warn-700">
-            <span aria-hidden="true" className="mb-3 block text-4xl">🃏</span>
+          <p className="teacher-warning">
+            <GameIcon name="cards" />
             カードがまだありません。先に教材セットにカードを追加してください。
             <Link to={`/t/sets/${id}/edit`} className="mt-3 flex min-h-11 items-center justify-center rounded-xl border-2 border-line bg-surface p-3">カードを追加する</Link>
           </p>
         )}
         {blocked && (
-          <div className="rounded-xl border-2 border-danger-500 bg-danger-50 p-4">
+          <div className="teacher-warning">
             <p className="font-bold text-danger-700">⚠ なおすまでゲームを始められません</p>
             <ul className="mt-2 list-disc space-y-1 pl-5 text-sm">
               {issues.filter((i) => i.level === 'error').map((i, n) => (
@@ -115,22 +123,19 @@ export function PlaySelectPage() {
           </div>
         )}
 
-        <h2 className="text-lg font-bold">ゲームをえらぶ</h2>
-        <ul className="grid gap-3 sm:grid-cols-2">
+        <ul className="game-tiles">
           {GAMES.map((g) => {
             const usable = g.ready && !blocked && !empty
             const inner = (
               <>
-                <div className="flex items-center gap-2">
-                  <span className="text-3xl" aria-hidden="true">{g.icon}</span>
-                  <span className="text-lg font-bold">{g.name}</span>
+                <GameIcon name={g.icon} width="48" height="48" />
+                <span>{g.name}</span>
                   {!g.ready && (
                     <span className="ml-auto rounded-lg bg-line px-2 py-1 text-xs font-bold text-ink-soft">
                       準備中
                     </span>
                   )}
-                </div>
-                <p className="mt-2 text-sm text-ink-soft">{g.summary}</p>
+                <p className="teacher-game-summary">{g.summary}</p>
               </>
             )
             return (
@@ -138,12 +143,12 @@ export function PlaySelectPage() {
                 {usable ? (
                   <Link
                     to={`/t/sets/${id}/play/${g.id}`}
-                    className="block h-full rounded-2xl border-2 border-brand-500 bg-surface p-4 hover:bg-brand-50"
+                    className={`game-tile game-tile--${g.id === 'flashcards' ? 'flash' : g.id}`}
                   >
                     {inner}
                   </Link>
                 ) : (
-                  <div className="h-full rounded-2xl border-2 border-line bg-surface p-4 opacity-60">
+                  <div aria-disabled="true" className={`game-tile game-tile--${g.id === 'flashcards' ? 'flash' : g.id} teacher-game-disabled`}>
                     {inner}
                   </div>
                 )}
@@ -152,6 +157,6 @@ export function PlaySelectPage() {
           })}
         </ul>
       </main>
-    </>
+    </div>
   )
 }

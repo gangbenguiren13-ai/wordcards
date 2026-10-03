@@ -22,13 +22,14 @@ import { memoryCards, pickMemoryCards, GAME_NAMES, type MiniGame } from '@/games
 import { MemoryGame } from '@/games/shared/MemoryGame'
 import { SlowRevealGame } from '@/games/shared/SlowRevealGame'
 import type { MaterialSet, Card, MemoryDefaults, SlowRevealDefaults } from '@/types'
+import '@/styles/teacherStage.css'
 
 export function MiniPlayPage({ game }: { game: MiniGame }) {
   const { id = '' } = useParams()
   const sq = useQuery({ queryKey: ['set', id], queryFn: () => getSet(id) })
   const cq = useQuery({ queryKey: ['cards', id], queryFn: () => getCards(id) })
-  if (sq.isError || cq.isError) return <><AppHeader back={`/t/sets/${id}/play`} /><LoadError onRetry={() => { void sq.refetch(); void cq.refetch() }} retrying={sq.isFetching || cq.isFetching} /></>
-  if (!sq.data || !cq.data) return <Spinner />
+  if (sq.isError || cq.isError) return <div className="teacher-stage"><AppHeader dark back={`/t/sets/${id}/play`} /><LoadError onRetry={() => { void sq.refetch(); void cq.refetch() }} retrying={sq.isFetching || cq.isFetching} /></div>
+  if (!sq.data || !cq.data) return <div className="teacher-stage"><Spinner /></div>
   return <MiniSetup key={`${id}:${game}`} set={sq.data} cards={cq.data} game={game} />
 }
 
@@ -87,8 +88,8 @@ function MiniSetup({ set, cards, game }: { set: MaterialSet; cards: Card[]; game
   }
   if (playing) return game === 'memory' ? <MemoryGame teacher set={set} items={playing.items} settings={playing.memory} voice={voice} onExit={() => navigate(`/t/sets/${set.id}/play`)} />
     : <SlowRevealGame set={set} items={playing.items} settings={playing.reveal} voice={voice} teacher onExit={() => navigate(`/t/sets/${set.id}/play`)} />
-  return <><AppHeader title={`${GAME_NAMES[game]}の設定`} back={`/t/sets/${set.id}/play`} />
-    <main className="mx-auto flex max-w-2xl flex-col gap-4 p-4 pb-12">
+  return <div className="teacher-stage"><AppHeader dark title={`${GAME_NAMES[game]}の設定`} back={`/t/sets/${set.id}/play`} />
+    <main className="teacher-settings-panel">
       <IssuePanel issues={validateSet({ title: set.title, mode: set.mode, gamesConfig: set.games_config, cards }).filter(i => i.level === 'warning')} />
       <QuickStart feedback={<>{/* 折りたたんでも開始できない理由を隠さない */}{insufficient && <p role="alert">{game === 'memory' ? `${memory.cardCount}枚で遊ぶには${memory.cardCount / 2}件の教材カードが必要です。枚数を減らすか、カードを追加してください。` : '画像のあるカードを追加してください。'}</p>}{blocked && <p role="alert">教材の未入力・エラーを直してから始めてください。</p>}{failedAction === 'start' && <ActionError error={error} onRetry={() => void start()} onDismiss={() => setError('')} busy={busy} />}</>} game={`${game}:${set.id}`} count={game === 'memory' ? memory.cardCount : usable.length}
         busy={busy} disabled={blocked || insufficient} onStart={() => void start()}
@@ -101,9 +102,9 @@ function MiniSetup({ set, cards, game }: { set: MaterialSet; cards: Card[]; game
       <p>{game === 'memory' ? '2枚ずつめくってペアを探します。そろうと同じチームが続けられます。' : '画像が少しずつ開きます。答えを予想してから「せいかい を みる」を押します。'}</p>
       <p>使えるカード：{usable.length}件{cards.length > usable.length ? `（画像などが足りない${cards.length - usable.length}件は除外）` : ''}</p>
 
-      {busy && <LoadingProgress {...(failedAction === 'start' ? progress : {})} label={failedAction === 'start' ? 'カードの画像と音声を よみこみちゅう' : '設定を保存しています'} />}
+      {busy && <LoadingProgress gameStyle={failedAction === 'start'} audioEnabled={set.audio_enabled && failedAction === 'start'} {...(failedAction === 'start' ? progress : {})} label={failedAction === 'start' ? 'カードの画像と音声を よみこみちゅう' : '設定を保存しています'} />}
       <fieldset disabled={busy} className="flex flex-col gap-3 rounded-xl border-2 border-line p-4"><Toggle label="生徒の共有画面でこのゲームを使えるようにする" checked={enabled} onChange={setEnabled} />
         <Button onClick={() => void save()}>この設定を教材に保存</Button>
         {failedAction === 'save' && <ActionError error={error} onRetry={() => void save()} onDismiss={() => setError('')} busy={busy} />}<p className="text-sm text-ink-soft">保存すると、次に開くときと生徒用リンクに反映されます。</p></fieldset>
-    </main></>
+    </main></div>
 }

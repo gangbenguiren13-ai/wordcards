@@ -43,3 +43,36 @@ const japanese = [...new Set(latin + range(0x3041, 0x3096) + range(0x3099, 0x309
   + (literals.match(/[\p{Script=Han}\p{P}\p{S}]/gu)?.join('') ?? ''))].sort().join('')
 return { japanese, latin, files: [...files].map(f => path.relative(root, f).replaceAll('\\', '/')).sort() }
 }
+
+/** Additional teacher glyphs; never expand the student subset. */
+export async function teacherFontText(root = process.cwd()) {
+  const { japanese } = await fontText(root)
+  const files = new Set()
+  let literals = ''
+  async function visit(file) {
+    if (files.has(file)) return
+    files.add(file)
+    const ast = ts.createSourceFile(file, await readFile(file, 'utf8'), ts.ScriptTarget.Latest, true)
+    function collect(node) {
+      if (ts.isStringLiteral(node) || ts.isNoSubstitutionTemplateLiteral(node) || ts.isJsxText(node)
+        || ts.isTemplateHead(node) || ts.isTemplateMiddle(node) || ts.isTemplateTail(node)) literals += node.text
+      ts.forEachChild(node, collect)
+    }
+    collect(ast)
+    for (const node of ast.statements.filter(ts.isImportDeclaration)) {
+      const specifier = node.moduleSpecifier.text
+      const base = /^@\/(components|games)\//.test(specifier) ? path.join(root, 'src', specifier.slice(2))
+        : specifier.startsWith('.') ? path.resolve(path.dirname(file), specifier) : null
+      if (!base || !/[/\\](components|games|teacher)[/\\]/.test(base)) continue
+      for (const suffix of ['.tsx', '.ts', '/index.ts', '/index.tsx']) {
+        try { await readFile(base + suffix); await visit(base + suffix); break }
+        catch (error) { if (error.code !== 'ENOENT') throw error }
+      }
+    }
+  }
+  for (const file of ['src/pages/teacher/Login.tsx', 'src/pages/teacher/PlaySelect.tsx', 'src/pages/teacher/GamePlay.tsx', 'src/pages/teacher/MiniPlay.tsx', 'src/games/shared/QuickStart.tsx', 'src/components/AppHeader.tsx', 'src/components/LoadingProgress.tsx', 'src/types/index.ts']) await visit(path.join(root, file))
+  // These existing UI symbols have no outlines in Rounded M+; retain native symbol/emoji fallback.
+  const nativeSymbols = '▸▾⚠🔊'
+  const teacher = [...new Set(literals.match(/[\p{Script=Han}\p{P}\p{S}]/gu) ?? [])].filter(c => !japanese.includes(c) && !nativeSymbols.includes(c)).sort().join('')
+  return { teacher, nativeSymbols, files: [...files].map(f => path.relative(root, f).replaceAll('\\', '/')).sort() }
+}
