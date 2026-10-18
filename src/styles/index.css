@@ -2,13 +2,13 @@
 
 /* ------------------------------------------------------------------
    WordCards デザイントークン
-   方針: 明るく実直。過度なグラデーション・装飾を使わない。
+   方針: 静かなガラスの枠と、単語・画像をはっきり見せるカード面。
    タップ領域は最小 44px、生徒用の主要ボタンは 64px 以上。
 ------------------------------------------------------------------- */
 @theme {
-  --color-game-bg: #2a2873;
-  --color-game-panel: #1f1d5e;
-  --color-game-line: #3a3794;
+  --color-game-bg: #153449;
+  --color-game-panel: #122d40;
+  --color-game-line: #58788b;
   --color-game-yellow: #ffc53d;
   --color-game-yellow-shadow: #c98a12;
   --color-game-blue: #3fb6ff;
@@ -231,4 +231,60 @@
 }
 @media (prefers-reduced-motion: reduce) {
   :is(.game-shell, [data-audience="student"]) *, :is(.game-shell, [data-audience="student"]) *::before, :is(.game-shell, [data-audience="student"]) *::after, .game-button { animation: none !important; transition: none !important; }
+}
+
+/* Glass is limited to stationary frames. Flipping cards stay opaque and cheap to paint. */
+:root {
+  --glass-scene: radial-gradient(ellipse at 8% 0%, #427b8d80, transparent 60%), radial-gradient(ellipse at 100% 85%, #5e568470, transparent 65%), #153449;
+  --glass-light: #f2f8fc;
+  --glass-dark: #183b50;
+  --glass-blur: none;
+  --glass-shadow: inset 0 1px 0 #ffffffb3, 0 12px 30px #041a2c2e;
+}
+@supports ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+  :root { --glass-light: #f2f8fcee; --glass-dark: #183b50db; --glass-blur: blur(16px) saturate(120%); }
+}
+.game-shell, .student-surface { background: var(--glass-scene); }
+.game-shell > header, .game-shell > footer, .student-loading, .material-badge, .memory-status {
+  background: var(--glass-dark); border-color: #9fc8dc80;
+  box-shadow: inset 0 1px 0 #ffffff30;
+}
+.game-shell > header, .game-shell > footer, .student-prep-panel {
+  -webkit-backdrop-filter: var(--glass-blur); backdrop-filter: var(--glass-blur);
+}
+.student-prep-panel, .speech-bubble {
+  background: var(--glass-light); color: #16354b; border: 1px solid #ffffffb3; box-shadow: var(--glass-shadow);
+}
+.speech-bubble::before { border-right-color: var(--glass-light); }
+.game-tile {
+  border: 2px solid #ffffffad; box-shadow: var(--glass-shadow); animation: none;
+  background-image: linear-gradient(155deg, #ffffffb3, #ffffff00 65%);
+}
+.game-tile--flash { background-color: #a5dfff; }
+.game-tile--memory { background-color: #ffc2b9; }
+.game-tile--slowreveal { background-color: #9de9d3; }
+.game-tile:active, .game-button:active:not(:disabled) { transform: translateY(2px); box-shadow: inset 0 1px 4px #102c4733; }
+.game-button { background-image: linear-gradient(#ffffff26, #ffffff00 60%); box-shadow: inset 0 1px 0 #ffffff80, 0 4px 12px #041a2c33; }
+.game-choice:not(.game-choice--selected) { border-color: #7799ad; box-shadow: inset 0 1px 0 #fff, 0 3px 8px #041a2c1a; }
+.memory-tile { box-shadow: 0 5px 10px #041a2c40; }
+.memory-back { background: linear-gradient(145deg, #527e97, #23465f 70%); border-color: #b6d6e6; text-shadow: 0 2px 2px #122d40; }
+.memory-back::before { border-color: #ffffff60; }
+.memory-front { border-color: #8eacbf; background: #fff; }
+.flash-deck { border-color: #c6deeb; box-shadow: 0 5px 0 #92b0c3, 0 14px 28px #041a2c40; }
+.flash-deck::before, .flash-deck::after { background: #d5e6f0; border-color: #a7c3d4; }
+.reveal-window { background: #122d40; border-color: #8ce4ce; box-shadow: inset 0 1px 0 #fff, 0 10px 28px #041a2c40; }
+.done-stamp { background: #183b50; }
+.game-shell :focus-visible, .student-surface :focus-visible { outline: 3px solid #ffc53d; outline-offset: 3px; }
+.student-prep-panel :focus-visible { outline-color: #1d4ed8; }
+@media (max-width: 520px) {
+  .choice-heading .mascot-interactive { width: 140px; }
+  .speech-bubble { word-break: keep-all; }
+  .game-tile { gap: 12px; padding: 16px; }
+  .game-tile > .game-icon:first-child { width: 48px; height: 48px; }
+}
+[data-screen-mode="classroom"] { --glass-blur: none; --glass-dark: #183b50; --glass-light: #f2f8fc; }
+@media (prefers-reduced-transparency: reduce), (prefers-contrast: more) {
+  :root { --glass-blur: none; --glass-dark: #183b50; --glass-light: #f2f8fc; --glass-scene: #153449; }
+  .game-tile, .game-button, .memory-back { background-image: none; }
+  .memory-back { background-color: #23465f; }
 }
