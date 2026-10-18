@@ -66,11 +66,11 @@ export function Dialog({
         role="dialog"
         aria-modal="true"
         aria-label={title}
-        className={`w-full max-w-md rounded-2xl bg-surface p-6 shadow-xl ${game ? 'text-ink' : ''}`}
+        className={`app-dialog w-full max-w-md rounded-2xl bg-surface p-6 shadow-xl ${game ? 'text-ink' : ''}`}
       >
         <h2 className="text-xl font-bold">{title}</h2>
         {children && <div className="mt-3 text-ink-soft">{children}</div>}
-        <div className="mt-6 flex gap-3">
+        <div className="dialog-actions mt-6 flex gap-3">
           <Button variant={game ? 'paper' : 'secondary'} block onClick={onCancel} disabled={busy}>
             {cancelLabel}
           </Button>
