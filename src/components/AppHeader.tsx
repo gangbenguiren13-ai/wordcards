@@ -2,13 +2,14 @@ import { useToast } from '@/components/toast/useToast'
 import { Link } from 'react-router-dom'
 import { useAuth } from '@/auth/useAuth'
 import { Button } from '@/components/ui'
+import '@/styles/teacherGlass.css'
 
 /** 教師用画面の共通ヘッダー。生徒用画面では使わない。 */
 export function AppHeader({ title, back, dark = false }: { title?: string; back?: string; dark?: boolean }) {
   const { user, signOut } = useAuth()
   const toast = useToast()
   return (
-    <header className={`sticky top-0 z-30 border-b-2 border-line bg-surface${dark ? ' teacher-header' : ''}`}>
+    <header className={`teacher-app-header sticky top-0 z-30 border-b-2 border-line bg-surface${dark ? ' teacher-header' : ''}`}>
       <div className="mx-auto flex max-w-5xl items-center gap-3 p-3">
         {back ? (
           <Link
