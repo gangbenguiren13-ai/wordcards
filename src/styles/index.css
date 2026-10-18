@@ -282,6 +282,7 @@
 .dialog-actions { flex-wrap: wrap; }
 .dialog-actions > .app-button { flex: 1 1 max-content; width: auto; white-space: nowrap; }
 .game-shell > header .app-button, .game-shell > footer .app-button { padding-inline: clamp(12px, 2vw, 24px); }
+.game-shell > footer .app-button { flex-basis: max-content; white-space: nowrap; }
 .setting-choices { grid-template-columns: repeat(var(--choice-columns, 2), minmax(0, 1fr)); }
 .setting-choices > button, .game-choice > span { word-break: keep-all; overflow-wrap: anywhere; }
 :is(.teacher-settings-panel, .student-prep-panel) [role="switch"] { flex-wrap: wrap; }
