@@ -32,7 +32,9 @@ export function QuickStart({ game, count, summary, disabled, busy, onStart, chil
   return <>
     <section aria-label="ゲームをはじめる" className="teacher-quick-start">
       <Button variant="play" icon={<GameIcon name="play" filled />} size="xl" block disabled={disabled || busy} onClick={onStart}>
-        {busy ? 'よみこみちゅう…' : `${previous ? '前回と同じ設定ではじめる' : 'はじめる'}（${count}枚）`}
+        {busy ? 'よみこみちゅう…' : <span className="quick-start-label">
+          {previous && <span>前回と同じ設定で</span>}<span>はじめる（{count}枚）</span>
+        </span>}
       </Button>
       {feedback}
       <p className="text-center text-base text-ink-soft" aria-label="設定の要約">{summary}</p>

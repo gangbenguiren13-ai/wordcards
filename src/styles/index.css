@@ -276,7 +276,20 @@
 .done-stamp { background: #183b50; }
 .game-shell :focus-visible, .student-surface :focus-visible { outline: 3px solid #ffc53d; outline-offset: 3px; }
 .student-prep-panel :focus-visible { outline-color: #1d4ed8; }
+/* Let controls move to the next row before squeezing their labels. */
+.app-button { flex-shrink: 0; max-width: 100%; word-break: keep-all; overflow-wrap: anywhere; }
+.app-dialog { max-height: calc(100dvh - 32px); overflow-y: auto; }
+.dialog-actions { flex-wrap: wrap; }
+.dialog-actions > .app-button { flex: 1 1 max-content; width: auto; white-space: nowrap; }
+.game-shell > header .app-button, .game-shell > footer .app-button { padding-inline: clamp(12px, 2vw, 24px); }
+.setting-choices { grid-template-columns: repeat(var(--choice-columns, 2), minmax(0, 1fr)); }
+.setting-choices > button, .game-choice > span { word-break: keep-all; overflow-wrap: anywhere; }
+:is(.teacher-settings-panel, .student-prep-panel) [role="switch"] { flex-wrap: wrap; }
+:is(.teacher-settings-panel, .student-prep-panel) [role="switch"] > span:first-child { flex: 1 1 max-content; min-width: 0; }
+:is(.teacher-settings-panel, .student-prep-panel) [role="switch"] > span:last-child { margin-left: auto; }
 @media (max-width: 520px) {
+  .setting-choices, .game-choices--players { grid-template-columns: minmax(0, 1fr); }
+  .game-end .game-button--play { padding-inline: 12px; }
   .choice-heading .mascot-interactive { width: 140px; }
   .speech-bubble { word-break: keep-all; }
   .game-tile { gap: 12px; padding: 16px; }

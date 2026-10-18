@@ -80,3 +80,8 @@
 .teacher-screen-mode button[aria-pressed="true"] { border-color: #23465f; background: #dcecf7; box-shadow: 0 3px 0 #23465f; }
 .teacher-game-disabled:active { box-shadow: var(--glass-shadow); }
 .teacher-stage .teacher-settings-panel:has(> .student-loading) { background: transparent; border: 0; box-shadow: none; -webkit-backdrop-filter: none; backdrop-filter: none; }
+.quick-start-label > span { display: inline-block; }
+@media (max-width: 520px) {
+  .teacher-stage .teacher-settings-panel { width: calc(100% - 32px); padding: 16px; }
+  .teacher-quick-start > .app-button { padding-inline: 12px; }
+}

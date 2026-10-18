@@ -1,4 +1,4 @@
-import type { ReactNode } from 'react'
+import type { CSSProperties, ReactNode } from 'react'
 
 /**
  * ゲーム開始前の設定画面の部品。
@@ -37,8 +37,8 @@ export function ChoiceGroup<T extends string | number>({
 }) {
   return (
     <div
-      className="grid gap-2"
-      style={{ gridTemplateColumns: `repeat(${columns}, minmax(0, 1fr))` }}
+      className="setting-choices grid gap-2"
+      style={{ '--choice-columns': columns } as CSSProperties}
     >
       {options.map((o) => (
         <button

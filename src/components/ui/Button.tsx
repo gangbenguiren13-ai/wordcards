@@ -46,7 +46,7 @@ export function Button({
     <button
       data-variant={variant}
       className={[
-        'inline-flex items-center justify-center rounded-xl border-2 font-bold',
+        'app-button inline-flex items-center justify-center rounded-xl border-2 font-bold',
         'transition-colors disabled:cursor-not-allowed',
         VARIANTS[variant].includes('game-button') ? 'disabled:saturate-0' : 'disabled:opacity-40',
         VARIANTS[variant],
